@@ -54,6 +54,8 @@ USE_MYSQL = _db_scheme in ('mysql', 'mariadb')
 USE_SQLITE = not (USE_POSTGRES or USE_MYSQL)
 DB_TYPE_LABEL = 'PostgreSQL' if USE_POSTGRES else 'MySQL/MariaDB' if USE_MYSQL else 'SQLite'
 SETTINGS_KEY_COL = 'setting_key' if USE_MYSQL else 'key'
+print("DATABASE_URL =", repr(DATABASE_URL))
+print("DB_SCHEME =", urlparse(DATABASE_URL).scheme if DATABASE_URL else "EMPTY")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
