@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>الإعدادات – نظام متابعة الاقتصاد الأخضر</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" />
+</head>
+<body data-page="settings">
+
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-layout">
+  <!-- ══ القائمة الجانبية ══ -->
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-leaf"></i></div>
+      <div class="brand-text"><h2>الاقتصاد الأخضر</h2><span>Green Economy Monitor</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label" data-i18n="nav.main">القائمة الرئيسية</div>
+      <a href="{{ url_for('dashboard') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-chart-column"></i></span> <span data-i18n="nav.dashboard">لوحة التحكم</span></a>
+      {% if role != 'viewer' %}
+      <a href="{{ url_for('data_entry') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-plus"></i></span> <span data-i18n="nav.dataEntry">إدخال البيانات</span></a>
+      {% endif %}
+      <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span> <span data-i18n="nav.reports">التقارير والتحليلات</span></a>
+      <div class="nav-section-label" style="margin-top:.75rem" data-i18n="nav.analytics">التحليلات المتقدمة</div>
+      <a href="{{ url_for('green_score_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-star"></i></span> <span data-i18n="nav.greenScore">مؤشر الأداء البيئي</span></a>
+      <a href="{{ url_for('predictions_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-brain"></i></span> <span data-i18n="nav.predictions">توقعات AI</span></a>
+      <a href="{{ url_for('compare_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-code-compare"></i></span> <span data-i18n="nav.compare">مقارنة المؤسسات</span></a>
+      <a href="{{ url_for('notifications_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-bell"></i></span> <span data-i18n="nav.notifications">الإشعارات</span><span class="nav-badge" id="sidebarAlertBadge" style="display:none">0</span></a>
+      {% if role == 'admin' %}
+      <div class="nav-section-label" style="margin-top:.75rem" data-i18n="nav.system">النظام</div>
+      <a href="{{ url_for('settings_page') }}" class="nav-item active"><span class="nav-icon"><i class="fa-solid fa-gear"></i></span> <span data-i18n="nav.settings">الإعدادات</span></a>
+      {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+        <div><div class="user-name">{{ username }}</div><div class="user-role" data-i18n="user.role">{% if role == 'admin' %}مدير النظام{% elif role == 'user' %}مستخدم{% else %}مشاهد{% endif %}</div></div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-btn"><span><i class="fa-solid fa-right-from-bracket"></i></span> <span data-i18n="nav.logout">تسجيل الخروج</span></a>
+    </div>
+  </aside>
+
+  <!-- ══ المحتوى الرئيسي ══ -->
+  <main class="main-content">
+    <header class="topbar">
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="القائمة"><i class="fa-solid fa-bars"></i></button>
+      <div class="topbar-title">
+        <h1><i class="fa-solid fa-gear"></i> <span data-i18n="nav.settings">الإعدادات</span></h1>
+        <p data-i18n="settings.subtitle">إدارة إعدادات النظام والحساب</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-badge"><span class="badge-dot"></span><span data-i18n="status.connected">متصل</span></div>
+        <div class="topbar-role-badge"><i class="fa-solid fa-user-tag"></i> {% if role == 'admin' %}مدير{% elif role == 'user' %}مستخدم{% else %}مشاهد{% endif %}</div>
+        <button class="theme-toggle" id="themeToggle"><i class="fa-solid fa-moon"></i></button>
+        <button class="lang-toggle" id="langToggle">EN</button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- تبويبات الإعدادات -->
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="general">
+          <i class="fa-solid fa-sliders"></i> <span data-i18n="settings.tab.general">إعدادات عامة</span>
+        </button>
+        <button class="settings-tab" data-tab="account">
+          <i class="fa-solid fa-user-lock"></i> <span data-i18n="settings.tab.account">الحساب</span>
+        </button>
+        <button class="settings-tab" data-tab="users">
+          <i class="fa-solid fa-users"></i> <span data-i18n="settings.tab.users">المستخدمون</span>
+        </button>
+        <button class="settings-tab" data-tab="mail">
+          <i class="fa-solid fa-envelope"></i> <span data-i18n="settings.tab.mail">البريد الإلكتروني</span>
+        </button>
+        <button class="settings-tab" data-tab="audit">
+          <i class="fa-solid fa-shield-halved"></i> <span data-i18n="settings.tab.audit">سجل التدقيق</span>
+        </button>
+        <button class="settings-tab" data-tab="sysinfo">
+          <i class="fa-solid fa-circle-info"></i> <span data-i18n="settings.tab.sysinfo">معلومات النظام</span>
+        </button>
+        <button class="settings-tab" data-tab="datamanage">
+          <i class="fa-solid fa-database"></i> إدارة البيانات
+        </button>
+      </div>
+
+      <!-- ── لوح: إعدادات عامة ── -->
+      <div class="settings-panel active" id="panel-general">
+        <div class="settings-section">
+          <div class="settings-section-title"><i class="fa-solid fa-sliders"></i> <span data-i18n="settings.general.title">الإعدادات العامة</span></div>
+          <div class="settings-grid">
+            <div class="form-group">
+              <label data-i18n="settings.systemName">اسم النظام</label>
+              <input type="text" id="settingSystemName" class="form-control-entry"
+                     placeholder="نظام متابعة الاقتصاد الأخضر" />
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.carbonThreshold">حد انبعاثات الكربون (طن)</label>
+              <input type="number" id="settingCarbonThreshold" class="form-control-entry"
+                     placeholder="1000" min="0" step="50" />
+              <small style="color:var(--text-muted);font-size:.75rem" data-i18n="settings.carbonThresholdHint">
+                تُرسَل تنبيهات عند تجاوز هذا الحد
+              </small>
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.defaultLang">اللغة الافتراضية</label>
+              <select id="settingDefaultLang" class="form-control-entry">
+                <option value="ar">العربية</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.defaultTheme">المظهر الافتراضي</label>
+              <select id="settingDefaultTheme" class="form-control-entry">
+                <option value="light">فاتح (Light)</option>
+                <option value="dark">داكن (Dark)</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:1.25rem">
+            <button class="btn btn-primary" onclick="SettingsPage.saveGeneral()">
+              <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn.save">حفظ الإعدادات</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── لوح: الحساب ── -->
+      <div class="settings-panel" id="panel-account">
+        <div class="settings-section">
+          <div class="settings-section-title"><i class="fa-solid fa-user-lock"></i> <span data-i18n="settings.account.title">تغيير كلمة المرور</span></div>
+          <div class="settings-grid">
+            <div class="form-group settings-full">
+              <label data-i18n="settings.currentPwd">كلمة المرور الحالية</label>
+              <input type="password" id="currentPassword" class="form-control-entry"
+                     autocomplete="current-password" />
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.newPwd">كلمة المرور الجديدة</label>
+              <input type="password" id="newPassword" class="form-control-entry"
+                     autocomplete="new-password" />
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.confirmPwd">تأكيد كلمة المرور</label>
+              <input type="password" id="confirmPassword" class="form-control-entry"
+                     autocomplete="new-password" />
+            </div>
+            <div class="form-group settings-full">
+              <small style="color:var(--text-muted);font-size:.78rem" data-i18n="settings.pwdHint">
+                يجب أن تكون كلمة المرور 6 أحرف على الأقل
+              </small>
+            </div>
+          </div>
+          <div style="margin-top:1.25rem">
+            <button class="btn btn-primary" onclick="SettingsPage.changePassword()">
+              <i class="fa-solid fa-key"></i> <span data-i18n="btn.changePwd">تغيير كلمة المرور</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── لوح: البريد الإلكتروني ── -->
+      <div class="settings-panel" id="panel-mail">
+        <div class="settings-section">
+          <div class="settings-section-title"><i class="fa-solid fa-envelope"></i> <span data-i18n="settings.mail.title">إعدادات البريد الإلكتروني</span></div>
+          <div class="settings-grid">
+            <div class="form-group settings-full" style="display:flex;align-items:center;gap:1rem">
+              <label class="toggle-switch">
+                <input type="checkbox" id="settingMailEnabled" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span data-i18n="settings.mailEnable">تفعيل إشعارات البريد الإلكتروني</span>
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.mailServer">خادم SMTP</label>
+              <input type="text" id="settingMailServer" class="form-control-entry"
+                     placeholder="smtp.gmail.com" />
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.mailPort">المنفذ (Port)</label>
+              <input type="number" id="settingMailPort" class="form-control-entry"
+                     placeholder="587" min="1" max="65535" />
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.mailUser">بريد المُرسِل</label>
+              <input type="email" id="settingMailUser" class="form-control-entry"
+                     placeholder="sender@example.com" />
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.mailTo">بريد المُستقبِل (للتنبيهات)</label>
+              <input type="email" id="settingMailTo" class="form-control-entry"
+                     placeholder="admin@example.com" />
+            </div>
+            <div class="form-group settings-full">
+              <small style="color:var(--text-muted);font-size:.78rem">
+                <i class="fa-solid fa-circle-info"></i>
+                <span data-i18n="settings.mailPwdNote">كلمة مرور SMTP تُحفَظ في ملف .env فقط لأسباب أمنية</span>
+              </small>
+            </div>
+          </div>
+          <div style="margin-top:1.25rem">
+            <button class="btn btn-primary" onclick="SettingsPage.saveMail()">
+              <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn.save">حفظ الإعدادات</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── لوح: معلومات النظام ── -->
+      <div class="settings-panel" id="panel-sysinfo">
+        <div class="settings-section">
+          <div class="settings-section-title"><i class="fa-solid fa-circle-info"></i> <span data-i18n="settings.sysinfo.title">معلومات النظام</span></div>
+          <div class="system-info-grid">
+            <div class="sysinfo-card">
+              <div class="sysinfo-icon"><i class="fa-brands fa-python"></i></div>
+              <div>
+                <div class="sysinfo-label" data-i18n="settings.python">إصدار Python</div>
+                <div class="sysinfo-value" id="sysPythonVersion">–</div>
+              </div>
+            </div>
+            <div class="sysinfo-card">
+              <div class="sysinfo-icon"><i class="fa-solid fa-flask"></i></div>
+              <div>
+                <div class="sysinfo-label" data-i18n="settings.flask">إصدار Flask</div>
+                <div class="sysinfo-value" id="sysFlaskVersion">–</div>
+              </div>
+            </div>
+            <div class="sysinfo-card">
+              <div class="sysinfo-icon"><i class="fa-solid fa-database"></i></div>
+              <div>
+                <div class="sysinfo-label" data-i18n="settings.dbType">قاعدة البيانات</div>
+                <div class="sysinfo-value" id="sysDbType">–</div>
+              </div>
+            </div>
+            <div class="sysinfo-card">
+              <div class="sysinfo-icon"><i class="fa-solid fa-hard-drive"></i></div>
+              <div>
+                <div class="sysinfo-label" data-i18n="settings.dbSize">حجم قاعدة البيانات</div>
+                <div class="sysinfo-value" id="sysDbSize">–</div>
+              </div>
+            </div>
+            <div class="sysinfo-card">
+              <div class="sysinfo-icon"><i class="fa-solid fa-building"></i></div>
+              <div>
+                <div class="sysinfo-label" data-i18n="settings.totalInst">إجمالي المؤسسات</div>
+                <div class="sysinfo-value" id="sysTotalInstitutions">–</div>
+              </div>
+            </div>
+            <div class="sysinfo-card">
+              <div class="sysinfo-icon"><i class="fa-solid fa-code-branch"></i></div>
+              <div>
+                <div class="sysinfo-label" data-i18n="settings.version">إصدار التطبيق</div>
+                <div class="sysinfo-value">2.1.0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── لوح: إدارة المستخدمين ── -->
+      <div class="settings-panel" id="panel-users">
+        <div class="settings-section">
+          <div class="settings-section-title"><i class="fa-solid fa-users"></i> <span data-i18n="settings.tab.users">إدارة المستخدمين</span></div>
+          <div class="settings-grid" style="margin-bottom:1.25rem">
+            <div class="form-group">
+              <label>اسم المستخدم الجديد</label>
+              <input type="text" id="newUsername" class="form-control-entry" placeholder="مثال: user01" maxlength="50" />
+            </div>
+            <div class="form-group">
+              <label>كلمة المرور</label>
+              <input type="password" id="newUserPassword" class="form-control-entry" placeholder="6 أحرف على الأقل" autocomplete="new-password" />
+            </div>
+            <div class="form-group">
+              <label>الصلاحية</label>
+              <select id="newUserRole" class="form-control-entry">
+                <option value="viewer">مشاهد (Viewer)</option>
+                <option value="user">مستخدم (User)</option>
+                <option value="admin">مدير (Admin)</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="SettingsPage.addUser()">
+            <i class="fa-solid fa-user-plus"></i> إضافة مستخدم
+          </button>
+          <div style="margin-top:1.5rem" id="usersList">
+            <div style="text-align:center;padding:1.5rem;color:var(--text-muted)">جارِ التحميل...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── لوح: سجل التدقيق ── -->
+      <div class="settings-panel" id="panel-audit">
+        <div class="settings-section">
+          <div class="settings-section-title"><i class="fa-solid fa-shield-halved"></i> <span data-i18n="settings.tab.audit">سجل التدقيق</span></div>
+          <div style="margin-bottom:1rem">
+            <button class="btn btn-outline btn-sm" onclick="SettingsPage.loadAuditLog()">
+              <i class="fa-solid fa-rotate"></i> تحديث
+            </button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="data-table" id="auditLogTable">
+              <thead>
+                <tr>
+                  <th>التاريخ والوقت</th>
+                  <th>المستخدم</th>
+                  <th>العملية</th>
+                  <th>التفاصيل</th>
+                </tr>
+              </thead>
+              <tbody id="auditLogBody">
+                <tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--text-muted)">جارِ التحميل...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    
+
+      <!-- ── لوح: إدارة البيانات ── -->
+      <div class="settings-panel" id="panel-datamanage">
+        <div class="settings-section">
+          <div class="settings-section-title"><i class="fa-solid fa-database"></i> إدارة البيانات</div>
+
+          <!-- نسخة احتياطية -->
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem">
+            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(46,158,94,.12);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:1.1rem">
+                <i class="fa-solid fa-download"></i>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:.95rem">إنشاء نسخة احتياطية</div>
+                <div style="font-size:.78rem;color:var(--text-muted)">تحميل نسخة كاملة من قاعدة البيانات</div>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="SettingsPage.createBackup()">
+              <i class="fa-solid fa-download"></i> تحميل النسخة الاحتياطية
+            </button>
+          </div>
+
+          <!-- استعادة نسخة احتياطية -->
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem">
+            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(66,165,245,.12);display:flex;align-items:center;justify-content:center;color:#42a5f5;font-size:1.1rem">
+                <i class="fa-solid fa-upload"></i>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:.95rem">استعادة نسخة احتياطية</div>
+                <div style="font-size:.78rem;color:var(--text-muted)">رفع ملف .db لاستعادة قاعدة البيانات – سيتم حفظ القاعدة الحالية تلقائياً قبل الاستعادة</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+              <input type="file" id="restoreFileInput" accept=".db" style="display:none" onchange="SettingsPage.restoreBackup()" />
+              <button class="btn btn-outline" onclick="document.getElementById('restoreFileInput').click()">
+                <i class="fa-solid fa-upload"></i> اختيار ملف النسخة الاحتياطية
+              </button>
+              <span id="restoreFileName" style="font-size:.8rem;color:var(--text-muted)"></span>
+            </div>
+          </div>
+
+          <!-- حذف البيانات -->
+          <div style="background:rgba(229,57,53,.04);border:1px solid rgba(229,57,53,.25);border-radius:12px;padding:1.25rem">
+            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(229,57,53,.12);display:flex;align-items:center;justify-content:center;color:#e53935;font-size:1.1rem">
+                <i class="fa-solid fa-trash-can"></i>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:.95rem;color:#e53935">حذف جميع البيانات</div>
+                <div style="font-size:.78rem;color:var(--text-muted)">حذف جميع سجلات المؤسسات نهائياً – لا يمكن التراجع عن هذه العملية</div>
+              </div>
+            </div>
+            <button class="btn btn-danger" onclick="SettingsPage.deleteAllData()">
+              <i class="fa-solid fa-trash"></i> حذف جميع البيانات
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>توقعات AI – نظام متابعة الاقتصاد الأخضر</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" />
+  <script src="{{ url_for('static', filename='vendor/js/chart.umd.min.js') }}"></script>
+</head>
+<body data-page="predictions">
+
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-layout">
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-leaf"></i></div>
+      <div class="brand-text"><h2>الاقتصاد الأخضر</h2><span>Green Economy Monitor</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label" data-i18n="nav.main">القائمة الرئيسية</div>
+      <a href="{{ url_for('dashboard') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-chart-column"></i></span> <span data-i18n="nav.dashboard">لوحة التحكم</span></a>
+      {% if role != 'viewer' %}
+      <a href="{{ url_for('data_entry') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-plus"></i></span> <span data-i18n="nav.dataEntry">إدخال البيانات</span></a>
+      {% endif %}
+      <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span> <span data-i18n="nav.reports">التقارير والتحليلات</span></a>
+      <div class="nav-section-label" style="margin-top:.75rem" data-i18n="nav.analytics">التحليلات المتقدمة</div>
+      <a href="{{ url_for('green_score_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-star"></i></span> <span data-i18n="nav.greenScore">مؤشر الأداء البيئي</span></a>
+      <a href="{{ url_for('predictions_page') }}" class="nav-item active"><span class="nav-icon"><i class="fa-solid fa-brain"></i></span> <span data-i18n="nav.predictions">توقعات AI</span></a>
+      <a href="{{ url_for('compare_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-code-compare"></i></span> <span data-i18n="nav.compare">مقارنة المؤسسات</span></a>
+      <a href="{{ url_for('notifications_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-bell"></i></span> <span data-i18n="nav.notifications">الإشعارات</span><span class="nav-badge" id="sidebarAlertBadge" style="display:none">0</span></a>
+      {% if role == 'admin' %}
+      <div class="nav-section-label" style="margin-top:.75rem" data-i18n="nav.system">النظام</div>
+      <a href="{{ url_for('settings_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-gear"></i></span> <span data-i18n="nav.settings">الإعدادات</span></a>
+      {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+        <div><div class="user-name">{{ username }}</div><div class="user-role" data-i18n="user.role">{% if role == 'admin' %}مدير النظام{% elif role == 'user' %}مستخدم{% else %}مشاهد{% endif %}</div></div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-btn"><span><i class="fa-solid fa-right-from-bracket"></i></span> <span data-i18n="nav.logout">تسجيل الخروج</span></a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="القائمة"><i class="fa-solid fa-bars"></i></button>
+      <div class="topbar-title">
+        <h1><i class="fa-solid fa-brain"></i> <span data-i18n="nav.predictions">توقعات الانبعاثات – AI</span></h1>
+        <p data-i18n="predictions.subtitle">نمذجة الانحدار الخطي للتنبؤ بالانبعاثات المستقبلية</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-badge"><span class="badge-dot"></span><span data-i18n="status.connected">متصل</span></div>
+        <div class="topbar-role-badge"><i class="fa-solid fa-user-tag"></i> {% if role == 'admin' %}مدير{% elif role == 'user' %}مستخدم{% else %}مشاهد{% endif %}</div>
+        <button class="theme-toggle" id="themeToggle"><i class="fa-solid fa-moon"></i></button>
+        <button class="lang-toggle" id="langToggle">EN</button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- فلتر -->
+      <div class="form-card" style="margin-bottom:1.5rem">
+        <div class="card-header">
+          <div><h3 data-i18n="predictions.select">اختر مؤسسة أو اعرض الإجمالي</h3></div>
+        </div>
+        <div class="card-body" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+          <select id="predInstitution" class="form-control-entry" style="max-width:320px">
+            <option value="" data-i18n="predictions.all">جميع المؤسسات (إجمالي)</option>
+          </select>
+          <button class="btn btn-primary" onclick="PredictionsPage.load()">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="btn.predict">توقع</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- الرسم البياني -->
+      <div class="chart-card" style="margin-bottom:1.5rem">
+        <div class="card-header">
+          <div>
+            <h3 data-i18n="predictions.chartTitle">مسار الانبعاثات – الفعلي والمتوقع</h3>
+            <p data-i18n="predictions.chartSub">الخط المتقطع = قيم متوقعة بالذكاء الاصطناعي</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-container" style="height:320px"><canvas id="predChart"></canvas></div>
+          <p class="prediction-note">
+            <i class="fa-solid fa-circle-info"></i>
+            <span data-i18n="predictions.note">التوقعات مبنية على نموذج الانحدار الخطي. الدقة الفعلية تعتمد على حجم البيانات التاريخية.</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- جدول التوقعات -->
+      <div class="data-table-wrapper">
+        <div class="table-toolbar">
+          <h3 style="font-size:1rem;font-weight:700;color:var(--primary-dark)" data-i18n="predictions.table">القيم المتوقعة للسنوات القادمة</h3>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th data-i18n="col.year">السنة</th>
+                <th data-i18n="col.predictedCarbon">انبعاثات الكربون المتوقعة (طن)</th>
+                <th data-i18n="col.predictedEnergy">استهلاك الطاقة المتوقع (MWh)</th>
+                <th data-i18n="col.predictedWater">استهلاك المياه المتوقع (م³)</th>
+                <th data-i18n="col.predictedWaste">نسبة التدوير المتوقعة (%)</th>
+                <th data-i18n="col.trend">الاتجاه</th>
+              </tr>
+            </thead>
+            <tbody id="predTableBody">
+              <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)" data-i18n="loading">جارٍ التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Policy Simulator ── -->
+      <div class="policy-simulator-card">
+        <h3><i class="fa-solid fa-sliders"></i> <span data-i18n="sim.title">محاكي أثر السياسات</span></h3>
+        <div class="policy-sliders-grid">
+          <div class="policy-slider-item">
+            <label data-i18n="sim.carbonTax">نسبة ضريبة الكربون</label>
+            <input type="range" id="simCarbonTax" min="0" max="100" value="30">
+            <div class="slider-values">
+              <span>0%</span>
+              <span class="slider-current" id="simCarbonTaxVal">30%</span>
+              <span>100%</span>
+            </div>
+          </div>
+          <div class="policy-slider-item">
+            <label data-i18n="sim.subsidy">دعم الطاقة المتجددة</label>
+            <input type="range" id="simSubsidy" min="0" max="100" value="50">
+            <div class="slider-values">
+              <span>0%</span>
+              <span class="slider-current" id="simSubsidyVal">50%</span>
+              <span>100%</span>
+            </div>
+          </div>
+          <div class="policy-slider-item">
+            <label data-i18n="sim.efficiency">معايير الكفاءة</label>
+            <input type="range" id="simEfficiency" min="0" max="100" value="70">
+            <div class="slider-values">
+              <span>0%</span>
+              <span class="slider-current" id="simEfficiencyVal">70%</span>
+              <span>100%</span>
+            </div>
+          </div>
+        </div>
+        <div class="policy-result">
+          <div class="policy-result-grade" id="simGrade">B+</div>
+          <div class="policy-result-text">
+            <strong id="simStatus" data-i18n="sim.statusDefault">التقييم المتوقع: جيد جداً</strong>
+            <p id="simMsg" data-i18n="sim.msgDefault">السياسات الحالية ستحقق معظم أهداف الاستدامة في الموعد المحدد</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

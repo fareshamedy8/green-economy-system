@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>التقارير – نظام متابعة الاقتصاد الأخضر</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" />
+  <script src="{{ url_for('static', filename='vendor/js/chart.umd.min.js') }}"></script>
+</head>
+<body data-page="reports">
+
+<!-- تحميل -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app-layout">
+  <!-- ══ القائمة الجانبية ══════════════════════════════════════════════ -->
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-leaf"></i></div>
+      <div class="brand-text">
+        <h2>الاقتصاد الأخضر</h2>
+        <span>Green Economy Monitor</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label" data-i18n="nav.main">القائمة الرئيسية</div>
+      <a href="{{ url_for('dashboard') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-chart-column"></i></span> <span data-i18n="nav.dashboard">لوحة التحكم</span>
+      </a>
+      {% if role != 'viewer' %}
+      <a href="{{ url_for('data_entry') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-plus"></i></span> <span data-i18n="nav.dataEntry">إدخال البيانات</span>
+      </a>
+      {% endif %}
+      <a href="{{ url_for('reports') }}" class="nav-item active">
+        <span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span> <span data-i18n="nav.reports">التقارير والتحليلات</span>
+      </a>
+      <div class="nav-section-label" style="margin-top:.75rem" data-i18n="nav.analytics">التحليلات المتقدمة</div>
+      <a href="{{ url_for('green_score_page') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-star"></i></span> <span data-i18n="nav.greenScore">مؤشر الأداء البيئي</span>
+      </a>
+      <a href="{{ url_for('predictions_page') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-brain"></i></span> <span data-i18n="nav.predictions">توقعات AI</span>
+      </a>
+      <a href="{{ url_for('compare_page') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-code-compare"></i></span> <span data-i18n="nav.compare">مقارنة المؤسسات</span>
+      </a>
+      <a href="{{ url_for('notifications_page') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-bell"></i></span> <span data-i18n="nav.notifications">الإشعارات</span><span class="nav-badge" id="sidebarAlertBadge" style="display:none">0</span>
+      </a>
+      {% if role == 'admin' %}
+      <div class="nav-section-label" style="margin-top:.75rem" data-i18n="nav.system">النظام</div>
+      <a href="{{ url_for('settings_page') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-gear"></i></span> <span data-i18n="nav.settings">الإعدادات</span>
+      </a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+        <div>
+          <div class="user-name">{{ username }}</div>
+          <div class="user-role">{% if role == 'admin' %}مدير النظام{% elif role == 'user' %}مستخدم{% else %}مشاهد{% endif %}</div>
+        </div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-btn">
+        <span><i class="fa-solid fa-right-from-bracket"></i></span> تسجيل الخروج
+      </a>
+    </div>
+  </aside>
+
+  <!-- ══ المحتوى الرئيسي ═══════════════════════════════════════════════ -->
+  <main class="main-content">
+    <header class="topbar">
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="القائمة"><i class="fa-solid fa-bars"></i></button>
+      <div class="topbar-title">
+        <h1><i class="fa-solid fa-chart-line"></i> التقارير والتحليلات</h1>
+        <p>تحليل شامل لمؤشرات الاقتصاد الأخضر</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-badge">
+          <span class="badge-dot"></span>
+          <span>متصل</span>
+        </div>
+        <div class="topbar-role-badge">
+          <i class="fa-solid fa-user-tag"></i>
+          {% if role == 'admin' %}مدير{% elif role == 'user' %}مستخدم{% else %}مشاهد{% endif %}
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="ReportsPage.init()"><i class="fa-solid fa-rotate"></i> <span data-i18n="btn.refresh">تحديث</span></button>
+        <button class="theme-toggle" id="themeToggle" title="تبديل الوضع"><i class="fa-solid fa-moon"></i></button>
+        <button class="lang-toggle" id="langToggle">EN</button>
+        <button class="btn btn-success btn-sm" id="exportCsvBtn">
+          <i class="fa-solid fa-download"></i> <span data-i18n="btn.exportCsv">تصدير CSV</span>
+        </button>
+        <button class="btn btn-sm" id="exportExcelBtn" style="background:#1d6f42;color:#fff;border:none">
+          <i class="fa-solid fa-file-excel"></i> <span data-i18n="btn.exportExcel">تصدير Excel</span>
+        </button>
+        <button class="btn btn-sm" id="exportPdfBtn" style="background:#c62828;color:#fff;border:none">
+          <i class="fa-solid fa-file-pdf"></i> <span data-i18n="btn.exportPdf">تصدير PDF</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- ── المخطط الرئيسي ── -->
+      <div class="chart-card" style="margin-bottom:1.5rem">
+        <div class="card-header">
+          <div>
+            <h3><i class="fa-solid fa-chart-line"></i> مقارنة الانبعاثات واستهلاك الطاقة عبر السنوات</h3>
+            <p>إجمالي سنوي مجمّع لجميع المؤسسات</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-container" style="height:320px">
+            <canvas id="yearlyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── القوائم المقارنة ── -->
+      <div class="charts-grid" style="margin-bottom:1.5rem">
+
+        <!-- أعلى 5 مصادر انبعاث -->
+        <div class="chart-card">
+          <div class="card-header">
+            <div>
+              <h3><i class="fa-solid fa-circle-exclamation"></i> أعلى 5 مؤسسات بانبعاثات الكربون</h3>
+              <p>بناءً على أحدث سنة مسجلة</p>
+            </div>
+          </div>
+          <div class="card-body" id="topEmittersList">
+            <div style="text-align:center;padding:2rem;color:var(--text-muted)">جارٍ التحميل...</div>
+          </div>
+        </div>
+
+        <!-- أفضل 5 بالطاقة المتجددة -->
+        <div class="chart-card">
+          <div class="card-header">
+            <div>
+              <h3><i class="fa-solid fa-award"></i> أفضل 5 مؤسسات بالطاقة المتجددة</h3>
+              <p>الأعلى نسبة طاقة متجددة</p>
+            </div>
+          </div>
+          <div class="card-body" id="topRenewableList">
+            <div style="text-align:center;padding:2rem;color:var(--text-muted)">جارٍ التحميل...</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── جدول الملخص السنوي ── -->
+      <div class="data-table-wrapper">
+        <div class="table-toolbar">
+          <div>
+            <h3 style="font-size:1rem;font-weight:700;color:var(--primary-dark)"><i class="fa-solid fa-file-lines"></i> الملخص السنوي</h3>
+            <p style="font-size:.78rem;color:var(--text-muted);margin-top:.2rem">إجمالي المؤشرات مجمّعة سنوياً</p>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table class="data-table" id="yearlySummaryTable">
+            <thead>
+              <tr>
+                <th>السنة</th>
+                <th>عدد المؤسسات</th>
+                <th>إجمالي الطاقة (MWh)</th>
+                <th>متوسط الطاقة المتجددة</th>
+                <th>إجمالي الكربون</th>
+                <th>إجمالي المشاريع الخضراء</th>
+                <th>إجمالي المياه (م³)</th>
+                <th>متوسط التدوير</th>
+              </tr>
+            </thead>
+            <tbody id="yearlySummaryBody">
+              <tr>
+                <td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted)">
+                  جارٍ التحميل...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- تذييل الجدول -->
+        <div style="padding:.9rem 1.25rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem">
+          <span style="font-size:.8rem;color:var(--text-muted)">
+            <i class="fa-solid fa-clock"></i> آخر تحديث: <span id="lastUpdated">–</span>
+          </span>
+          <button class="btn btn-outline btn-sm" onclick="ReportsPage.init()"><i class="fa-solid fa-rotate"></i> تحديث التقرير</button>
+        </div>
+      </div><!-- /data-table-wrapper -->
+
+    </div><!-- /page-content -->
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+  // تحديث وقت آخر تحديث
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('lastUpdated');
+    if (el) el.textContent = new Date().toLocaleString('ar-SA');
+  });
+</script>
+</body>
+</html>

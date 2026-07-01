@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نظام متابعة الاقتصاد الأخضر – Green Economy Monitoring System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" />
+</head>
+<body class="landing-page">
+
+  <!-- خلفية متحركة -->
+  <div class="landing-bg">
+    <div class="landing-bg-orb orb-a"></div>
+    <div class="landing-bg-orb orb-b"></div>
+    <div class="landing-bg-orb orb-c"></div>
+    <div class="landing-particles">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- شريط التنقل العلوي -->
+  <nav class="landing-nav">
+    <div class="landing-nav-inner">
+      <a href="#" class="landing-logo">
+        <div class="landing-logo-icon"><i class="fa-solid fa-leaf"></i></div>
+        <span>الاقتصاد الأخضر</span>
+      </a>
+      <div class="landing-nav-links">
+        <a href="#features">المميزات</a>
+        <a href="#stats">الإحصائيات</a>
+        <a href="#tech">التقنيات</a>
+        <a href="{{ url_for('login') }}" class="landing-nav-btn">
+          <i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول
+        </a>
+      </div>
+      <button class="landing-menu-toggle" onclick="document.querySelector('.landing-nav-links').classList.toggle('open')">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══════════ القسم الرئيسي (Hero) ═══════════ -->
+  <section class="landing-hero">
+    <div class="landing-hero-content">
+      <div class="landing-hero-badge">
+        <i class="fa-solid fa-seedling"></i> نظام متكامل لمتابعة الاقتصاد الأخضر
+      </div>
+      <h1>
+        رصد ومتابعة مؤشرات
+        <span class="landing-gradient-text">الاقتصاد الأخضر</span>
+        <br />باحترافية
+      </h1>
+      <p class="landing-hero-desc">
+        منصة ذكية لمراقبة انبعاثات الكربون، استهلاك الطاقة، ونسبة الطاقة المتجددة
+        للمؤسسات — مع تنبؤات مستقبلية بالذكاء الاصطناعي ولوحة تحكم تفاعلية.
+      </p>
+      <div class="landing-hero-actions">
+        <a href="{{ url_for('login') }}" class="landing-btn-primary">
+          <i class="fa-solid fa-rocket"></i> ابدأ الآن
+        </a>
+        <a href="#features" class="landing-btn-outline">
+          <i class="fa-solid fa-circle-info"></i> اكتشف المزيد
+        </a>
+      </div>
+      <div class="landing-hero-mini-stats">
+        <div class="landing-mini-stat">
+          <span class="landing-mini-num">{{ public_stats.indicator_count }}</span>
+          <span>مؤشرات بيئية</span>
+        </div>
+        <div class="landing-mini-divider"></div>
+        <div class="landing-mini-stat">
+          <span class="landing-mini-num">AI</span>
+          <span>تنبؤات ذكية</span>
+        </div>
+        <div class="landing-mini-divider"></div>
+        <div class="landing-mini-stat">
+          <span class="landing-mini-num"><i class="fa-solid fa-shield-halved"></i></span>
+          <span>بيانات آمنة</span>
+        </div>
+      </div>
+    </div>
+    <div class="landing-hero-visual">
+      <div class="landing-dashboard-mockup">
+        <div class="mockup-bar">
+          <span class="mockup-dot red"></span>
+          <span class="mockup-dot yellow"></span>
+          <span class="mockup-dot green"></span>
+          <span class="mockup-title">لوحة التحكم</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-card-row">
+            <div class="mockup-card mc-green">
+              <i class="fa-solid fa-bolt"></i>
+              <div class="mc-label">الطاقة</div>
+              <div class="mc-val">{{ public_stats.latest_energy|round(0)|int }} <small>MWh</small></div>
+            </div>
+            <div class="mockup-card mc-blue">
+              <i class="fa-solid fa-cloud"></i>
+              <div class="mc-label">الكربون</div>
+              <div class="mc-val">{{ public_stats.latest_carbon|round(0)|int }} <small>طن</small></div>
+            </div>
+            <div class="mockup-card mc-teal">
+              <i class="fa-solid fa-solar-panel"></i>
+              <div class="mc-label">المتجددة</div>
+              <div class="mc-val">{{ '%.1f'|format(public_stats.latest_renewable) }}%</div>
+            </div>
+          </div>
+          <div class="mockup-chart">
+            <div class="mockup-chart-bar" style="height:40%"></div>
+            <div class="mockup-chart-bar" style="height:65%"></div>
+            <div class="mockup-chart-bar" style="height:50%"></div>
+            <div class="mockup-chart-bar" style="height:80%"></div>
+            <div class="mockup-chart-bar" style="height:35%"></div>
+            <div class="mockup-chart-bar" style="height:70%"></div>
+            <div class="mockup-chart-bar" style="height:55%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ قسم المميزات ═══════════ -->
+  <section class="landing-features" id="features">
+    <div class="landing-section-header">
+      <span class="landing-section-badge"><i class="fa-solid fa-star"></i> المميزات</span>
+      <h2>كل ما تحتاجه لمتابعة الأداء البيئي</h2>
+      <p>أدوات متقدمة لتحليل ورصد مؤشرات الاقتصاد الأخضر في مكان واحد</p>
+    </div>
+    <div class="landing-features-grid">
+      <div class="landing-feature-card">
+        <div class="lf-icon lf-green"><i class="fa-solid fa-chart-line"></i></div>
+        <h3>لوحة تحكم تفاعلية</h3>
+        <p>رسوم بيانية ديناميكية ومخططات شاملة لجميع مؤشرات الأداء البيئي مع تحديث لحظي.</p>
+      </div>
+      <div class="landing-feature-card">
+        <div class="lf-icon lf-blue"><i class="fa-solid fa-brain"></i></div>
+        <h3>تنبؤات بالذكاء الاصطناعي</h3>
+        <p>نماذج تنبؤية متقدمة لتوقع انبعاثات الكربون واستهلاك الطاقة للسنوات القادمة.</p>
+      </div>
+      <div class="landing-feature-card">
+        <div class="lf-icon lf-purple"><i class="fa-solid fa-scale-balanced"></i></div>
+        <h3>مقارنة المؤسسات</h3>
+        <p>مقارنة الأداء البيئي بين المؤسسات المختلفة بمخططات رادار تفاعلية.</p>
+      </div>
+      <div class="landing-feature-card">
+        <div class="lf-icon lf-orange"><i class="fa-solid fa-leaf"></i></div>
+        <h3>مؤشر الأداء الأخضر</h3>
+        <p>تصنيف شامل للمؤسسات بناءً على 6 مؤشرات بيئية مع درجة أداء متكاملة.</p>
+      </div>
+      <div class="landing-feature-card">
+        <div class="lf-icon lf-red"><i class="fa-solid fa-bell"></i></div>
+        <h3>تنبيهات ذكية</h3>
+        <p>إشعارات فورية عند تجاوز الحدود المسموحة مع تنبيهات بريد إلكتروني تلقائية.</p>
+      </div>
+      <div class="landing-feature-card">
+        <div class="lf-icon lf-teal"><i class="fa-solid fa-file-export"></i></div>
+        <h3>تقارير متقدمة</h3>
+        <p>تصدير التقارير بصيغ PDF و Excel مع رسوم بيانية ملونة وتحليلات مفصلة.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ قسم الإحصائيات ═══════════ -->
+  <section class="landing-stats" id="stats">
+    <div class="landing-stats-inner">
+      <div class="landing-stat-box">
+        <div class="ls-icon"><i class="fa-solid fa-building"></i></div>
+        <div class="ls-num" data-target="{{ public_stats.total_institutions }}">0</div>
+        <div class="ls-label">مؤسسة مسجلة</div>
+      </div>
+      <div class="landing-stat-box">
+        <div class="ls-icon"><i class="fa-solid fa-chart-pie"></i></div>
+        <div class="ls-num" data-target="{{ public_stats.indicator_count }}">0</div>
+        <div class="ls-label">مؤشرات بيئية</div>
+      </div>
+      <div class="landing-stat-box">
+        <div class="ls-icon"><i class="fa-solid fa-calendar-days"></i></div>
+        <div class="ls-num" data-target="{{ public_stats.years_count }}">0</div>
+        <div class="ls-label">سنوات بيانات</div>
+      </div>
+      <div class="landing-stat-box">
+        <div class="ls-icon"><i class="fa-solid fa-users-gear"></i></div>
+        <div class="ls-num" data-target="{{ public_stats.role_count }}">0</div>
+        <div class="ls-label">مستويات صلاحيات</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ قسم التقنيات ═══════════ -->
+  <section class="landing-tech" id="tech">
+    <div class="landing-section-header">
+      <span class="landing-section-badge"><i class="fa-solid fa-microchip"></i> التقنيات</span>
+      <h2>مبني بأحدث التقنيات</h2>
+      <p>بنية تحتية قوية ومرنة تضمن الأداء والأمان</p>
+    </div>
+    <div class="landing-tech-grid">
+      <div class="landing-tech-card">
+        <div class="lt-icon"><i class="fa-brands fa-python"></i></div>
+        <h4>Python & Flask</h4>
+        <p>خادم خلفي سريع وآمن</p>
+      </div>
+      <div class="landing-tech-card">
+        <div class="lt-icon"><i class="fa-solid fa-database"></i></div>
+        <h4>SQLite / PostgreSQL</h4>
+        <p>قاعدة بيانات مرنة</p>
+      </div>
+      <div class="landing-tech-card">
+        <div class="lt-icon"><i class="fa-solid fa-chart-column"></i></div>
+        <h4>Chart.js</h4>
+        <p>رسوم بيانية تفاعلية</p>
+      </div>
+      <div class="landing-tech-card">
+        <div class="lt-icon"><i class="fa-brands fa-js"></i></div>
+        <h4>JavaScript ES6+</h4>
+        <p>واجهة مستخدم ديناميكية</p>
+      </div>
+      <div class="landing-tech-card">
+        <div class="lt-icon"><i class="fa-solid fa-robot"></i></div>
+        <h4>Linear Regression</h4>
+        <p>تنبؤات مستقبلية ذكية</p>
+      </div>
+      <div class="landing-tech-card">
+        <div class="lt-icon"><i class="fa-solid fa-file-pdf"></i></div>
+        <h4>ReportLab & OpenPyXL</h4>
+        <p>تصدير تقارير احترافية</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ قسم CTA ═══════════ -->
+  <section class="landing-cta">
+    <div class="landing-cta-inner">
+      <div class="landing-cta-icon"><i class="fa-solid fa-earth-americas"></i></div>
+      <h2>ابدأ متابعة الأداء البيئي الآن</h2>
+      <p>سجّل دخولك واستكشف لوحة التحكم التفاعلية مع بيانات تجريبية جاهزة</p>
+      <a href="{{ url_for('login') }}" class="landing-btn-primary landing-btn-lg">
+        <i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول
+      </a>
+      <div class="landing-cta-hint">
+        <i class="fa-solid fa-circle-info"></i>
+        للدخول لأول مرة استخدم: <code>admin</code> / <code>admin123</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ الفوتر ═══════════ -->
+  <footer class="landing-footer">
+    <div class="landing-footer-inner">
+      <div class="landing-footer-brand">
+        <div class="landing-logo-icon small"><i class="fa-solid fa-leaf"></i></div>
+        <span>نظام متابعة الاقتصاد الأخضر</span>
+      </div>
+      <p>&copy; 2026 جميع الحقوق محفوظة — Green Economy Monitoring System</p>
+    </div>
+  </footer>
+
+  <script>
+    // عدّاد الأرقام عند الظهور
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.querySelectorAll('.ls-num').forEach(el => {
+            const target = +el.dataset.target;
+            let current = 0;
+            const step = Math.max(1, Math.floor(target / 30));
+            const timer = setInterval(() => {
+              current += step;
+              if (current >= target) { current = target; clearInterval(timer); }
+              el.textContent = current;
+            }, 40);
+          });
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
+    const statsSection = document.querySelector('.landing-stats');
+    if (statsSection) observer.observe(statsSection);
+
+    // تفعيل أنيميشن الكروت عند الظهور
+    const cardObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          cardObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.landing-feature-card, .landing-tech-card').forEach(card => {
+      cardObserver.observe(card);
+    });
+
+    // التمرير السلس
+    document.querySelectorAll('.landing-nav-links a[href^="#"]').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.querySelector('.landing-nav-links').classList.remove('open');
+      });
+    });
+
+    // تغيير شفافية الشريط العلوي عند التمرير
+    window.addEventListener('scroll', () => {
+      document.querySelector('.landing-nav').classList.toggle('scrolled', window.scrollY > 50);
+    });
+
+    // الوضع الليلي المحفوظ
+    const theme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+  </script>
+</body>
+</html>

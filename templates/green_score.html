@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مؤشر الأداء البيئي – نظام متابعة الاقتصاد الأخضر</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" />
+</head>
+<body data-page="green-score">
+
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-layout">
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-leaf"></i></div>
+      <div class="brand-text"><h2>الاقتصاد الأخضر</h2><span>Green Economy Monitor</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label" data-i18n="nav.main">القائمة الرئيسية</div>
+      <a href="{{ url_for('dashboard') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-chart-column"></i></span> <span data-i18n="nav.dashboard">لوحة التحكم</span></a>
+      {% if role != 'viewer' %}
+      <a href="{{ url_for('data_entry') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-plus"></i></span> <span data-i18n="nav.dataEntry">إدخال البيانات</span></a>
+      {% endif %}
+      <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span> <span data-i18n="nav.reports">التقارير والتحليلات</span></a>
+      <div class="nav-section-label" style="margin-top:.75rem" data-i18n="nav.analytics">التحليلات المتقدمة</div>
+      <a href="{{ url_for('green_score_page') }}" class="nav-item active"><span class="nav-icon"><i class="fa-solid fa-star"></i></span> <span data-i18n="nav.greenScore">مؤشر الأداء البيئي</span></a>
+      <a href="{{ url_for('predictions_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-brain"></i></span> <span data-i18n="nav.predictions">توقعات AI</span></a>
+      <a href="{{ url_for('compare_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-code-compare"></i></span> <span data-i18n="nav.compare">مقارنة المؤسسات</span></a>
+      <a href="{{ url_for('notifications_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-bell"></i></span> <span data-i18n="nav.notifications">الإشعارات</span><span class="nav-badge" id="sidebarAlertBadge" style="display:none">0</span></a>
+      {% if role == 'admin' %}
+      <div class="nav-section-label" style="margin-top:.75rem" data-i18n="nav.system">النظام</div>
+      <a href="{{ url_for('settings_page') }}" class="nav-item"><span class="nav-icon"><i class="fa-solid fa-gear"></i></span> <span data-i18n="nav.settings">الإعدادات</span></a>
+      {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+        <div><div class="user-name">{{ username }}</div><div class="user-role" data-i18n="user.role">{% if role == 'admin' %}مدير النظام{% elif role == 'user' %}مستخدم{% else %}مشاهد{% endif %}</div></div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-btn"><span><i class="fa-solid fa-right-from-bracket"></i></span> <span data-i18n="nav.logout">تسجيل الخروج</span></a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="القائمة"><i class="fa-solid fa-bars"></i></button>
+      <div class="topbar-title">
+        <h1><i class="fa-solid fa-star"></i> <span data-i18n="nav.greenScore">مؤشر الأداء البيئي المركّب</span></h1>
+        <p data-i18n="greenScore.subtitle">تقييم شامل لأداء المؤسسات بيئياً</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-badge"><span class="badge-dot"></span><span data-i18n="status.connected">متصل</span></div>
+        <div class="topbar-role-badge"><i class="fa-solid fa-user-tag"></i> {% if role == 'admin' %}مدير{% elif role == 'user' %}مستخدم{% else %}مشاهد{% endif %}</div>
+        <button class="theme-toggle" id="themeToggle"><i class="fa-solid fa-moon"></i></button>
+        <button class="lang-toggle" id="langToggle">EN</button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- ── SVG Progress Circle Summary ── -->
+      <div class="score-summary-card">
+        <div class="svg-circle-wrap">
+          <svg viewBox="0 0 120 120">
+            <circle class="svg-circle-bg"  cx="60" cy="60" r="52.5"/>
+            <circle class="svg-circle-fill" id="svgScoreCircle" cx="60" cy="60" r="52.5"/>
+          </svg>
+          <div class="svg-circle-text">
+            <span class="svg-circle-value" id="svgScoreValue">0</span>
+            <span class="svg-circle-label">/100</span>
+          </div>
+        </div>
+        <div class="score-summary-info">
+          <h3 data-i18n="greenScore.avgTitle">متوسط مؤشر الأداء البيئي</h3>
+          <p data-i18n="greenScore.avgSub">التقييم المجمّع لجميع المؤسسات في السنة المختارة</p>
+          <div class="score-summary-stats">
+            <div class="score-summary-stat">
+              <div class="val" id="svgSummaryGrade">–</div>
+              <div class="lbl" data-i18n="greenScore.topGrade">أعلى تصنيف</div>
+            </div>
+            <div class="score-summary-stat">
+              <div class="val" id="svgSummaryCount">–</div>
+              <div class="lbl" data-i18n="greenScore.institutions">المؤسسات</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- فلتر السنة -->
+      <div class="form-card" style="margin-bottom:1.5rem">
+        <div class="card-body" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+          <label style="font-weight:600;color:var(--text-muted);font-size:.875rem" data-i18n="label.year">السنة:</label>
+          <div id="yearTabs" class="year-tabs"></div>
+        </div>
+      </div>
+
+      <!-- Grid النتائج -->
+      <div id="scoresGrid" class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+        <div style="text-align:center;padding:3rem;color:var(--text-muted);grid-column:1/-1">
+          <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem"></i>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

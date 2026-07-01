@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>عارض قاعدة بيانات SQLite | SQLite Database Viewer</title>
+  <style>
+    :root {
+      --bg: #0b0f16;
+      --panel: #111827;
+      --text: #e6edf3;
+      --muted: #98a2b3;
+      --blue: #1e7cff;
+      --blue-2: #3a8bff;
+      --border: #22304a;
+      --good: #3ecf8e;
+      --warn: #ffb020;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 10%, #1b2b49 0%, rgba(27, 43, 73, 0) 40%),
+        radial-gradient(circle at 90% 80%, #162a44 0%, rgba(22, 42, 68, 0) 42%),
+        linear-gradient(180deg, #090d14, var(--bg));
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      min-height: 100vh;
+      animation: fadeIn 0.35s ease;
+    }
+
+    .container {
+      width: min(1200px, 94vw);
+      margin: 28px auto;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(30, 124, 255, 0.15), rgba(58, 139, 255, 0.03));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.3rem, 2vw, 2rem);
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .status {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .status.ok {
+      color: var(--good);
+    }
+
+    .status.warn {
+      color: var(--warn);
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(17, 24, 39, 0.95), rgba(10, 15, 22, 0.95));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 1.1rem;
+    }
+
+    #tableButtons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .table-btn {
+      border: 1px solid #4d7dcb;
+      color: #eef5ff;
+      background: linear-gradient(120deg, var(--blue), var(--blue-2));
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
+    }
+
+    .table-btn small {
+      display: block;
+      color: #d6e4ff;
+      font-weight: 400;
+      opacity: 0.95;
+      direction: ltr;
+      text-align: left;
+    }
+
+    .table-btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+    }
+
+    .table-btn.active {
+      outline: 2px solid #9fc0ff;
+      box-shadow: 0 0 0 3px rgba(58, 139, 255, 0.25);
+    }
+
+    .code-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 12px;
+    }
+
+    pre {
+      margin: 0;
+      direction: ltr;
+      text-align: left;
+      background: #0a1324;
+      border: 1px solid #1f3354;
+      border-radius: 10px;
+      padding: 12px;
+      overflow: auto;
+      color: #d8e7ff;
+      line-height: 1.6;
+      font-size: 0.92rem;
+    }
+
+    .explain {
+      border: 1px solid #1f3354;
+      background: rgba(17, 31, 55, 0.55);
+      border-radius: 10px;
+      padding: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .explain strong {
+      color: #cfe2ff;
+    }
+
+    .column-guide {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .column-card {
+      border: 1px solid #27354f;
+      border-radius: 10px;
+      padding: 10px;
+      background: rgba(22, 30, 45, 0.65);
+    }
+
+    .column-card .name {
+      color: #cfe2ff;
+      font-weight: 700;
+      direction: ltr;
+      text-align: left;
+      word-break: break-word;
+    }
+
+    .column-card .label {
+      margin-top: 6px;
+      color: #e3ebf7;
+      font-size: 0.92rem;
+    }
+
+    .column-card .desc {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid #253450;
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #111a2a;
+      border-bottom: 1px solid #2a3b5b;
+      padding: 12px;
+      text-align: start;
+      vertical-align: bottom;
+    }
+
+    thead th .ar {
+      display: block;
+      color: #dce9ff;
+      font-size: 0.95rem;
+    }
+
+    thead th .en {
+      display: block;
+      color: #9eb5d8;
+      font-size: 0.79rem;
+      direction: ltr;
+      text-align: left;
+    }
+
+    tbody td {
+      border-top: 1px solid #1f2a3d;
+      padding: 10px;
+      vertical-align: top;
+      font-size: 0.92rem;
+    }
+
+    tbody tr:hover {
+      background: rgba(42, 66, 103, 0.22);
+    }
+
+    .value {
+      display: block;
+      color: #e6edf3;
+      word-break: break-word;
+      direction: ltr;
+      text-align: left;
+    }
+
+    .value.ar {
+      direction: rtl;
+      text-align: right;
+    }
+
+    .value-note {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    .empty {
+      color: #8390a3;
+      font-style: italic;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 980px) {
+      .code-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .column-guide {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        width: min(1200px, 96vw);
+      }
+
+      .hero,
+      .panel {
+        padding: 12px;
+      }
+
+      .column-guide {
+        grid-template-columns: 1fr;
+      }
+
+      .table-btn {
+        width: 100%;
+        text-align: right;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <h1>عارض قاعدة بيانات SQLite | SQLite Database Viewer</h1>
+      <p class="subtitle">
+        عرض احترافي وتفاعلي للجداول، البنية، وكود الإنشاء مع شرح عربي وإنجليزي.
+        يعمل بوضع القراءة فقط لحماية البيانات.
+      </p>
+      <p id="status" class="status">جاري التحميل...</p>
+    </section>
+
+    <section class="panel">
+      <h2>الجداول المتاحة | Available Tables</h2>
+      <div id="tableButtons"></div>
+    </section>
+
+    <section class="panel">
+      <h2>كود SQL والشرح | SQL & Explanation</h2>
+      <div id="sqlSection" class="code-grid"></div>
+    </section>
+
+    <section class="panel">
+      <h2>شرح الأعمدة | Column Guide</h2>
+      <div id="columnGuide" class="column-guide"></div>
+    </section>
+
+    <section class="panel">
+      <h2>بيانات الجدول | Table Data</h2>
+      <div id="tableContainer" class="table-wrap"></div>
+    </section>
+  </main>
+
+  <script>
+    const tableButtonsEl = document.getElementById('tableButtons');
+    const tableContainerEl = document.getElementById('tableContainer');
+    const columnGuideEl = document.getElementById('columnGuide');
+    const sqlSectionEl = document.getElementById('sqlSection');
+    const statusEl = document.getElementById('status');
+
+    const tableDictionary = {
+      visitors: { ar: 'الزوار', en: 'Visitors' },
+      visitor: { ar: 'زائر', en: 'Visitor' },
+      visits: { ar: 'الزيارات', en: 'Visits' },
+      users: { ar: 'المستخدمون', en: 'Users' },
+      user: { ar: 'المستخدم', en: 'User' },
+      appointments: { ar: 'المواعيد', en: 'Appointments' },
+      appointment: { ar: 'الموعد', en: 'Appointment' },
+      bookings: { ar: 'الحجوزات', en: 'Bookings' },
+      booking: { ar: 'الحجز', en: 'Booking' },
+      employees: { ar: 'الموظفون', en: 'Employees' },
+      employee: { ar: 'الموظف', en: 'Employee' },
+      departments: { ar: 'الأقسام', en: 'Departments' },
+      department: { ar: 'القسم', en: 'Department' },
+      hosts: { ar: 'المستضيفون', en: 'Hosts' },
+      host: { ar: 'المستضيف', en: 'Host' },
+      reports: { ar: 'التقارير', en: 'Reports' },
+      admin: { ar: 'المشرفون', en: 'Admins' },
+      time_slots: { ar: 'الفترات الزمنية', en: 'Time Slots' }
+    };
+
+    function makeMeta(ar, en, arDesc, enDesc) {
+      return { ar, en, arDesc, enDesc };
+    }
+
+    function humanize(value) {
+      return String(value || '').replace(/_/g, ' ').trim();
+    }
+
+    function toTitleCase(value) {
+      return humanize(value)
+        .toLowerCase()
+        .replace(/\b\w/g, (s) => s.toUpperCase());
+    }
+
+    function getTableMeta(name) {
+      const key = String(name || '').toLowerCase();
+      if (tableDictionary[key]) {
+        return tableDictionary[key];
+      }
+      return {
+        ar: `جدول ${humanize(name)}`,
+        en: toTitleCase(name)
+      };
+    }
+
+    function getColumnMeta(name) {
+      const key = String(name || '').toLowerCase();
+      const map = {
+        id: makeMeta('المعرّف', 'ID', 'رقم مميز لكل سجل داخل الجدول.', 'Unique identifier for each record.'),
+        name: makeMeta('الاسم', 'Name', 'الاسم الكامل أو المختصر للكيان.', 'Main display name for the record.'),
+        email: makeMeta('البريد الإلكتروني', 'Email', 'عنوان البريد الإلكتروني للتواصل.', 'Email address used for contact.'),
+        phone: makeMeta('رقم الهاتف', 'Phone', 'رقم الاتصال الأساسي.', 'Primary contact phone number.'),
+        mobile: makeMeta('رقم الهاتف', 'Mobile', 'رقم الجوال للمستخدم أو الزائر.', 'Mobile number for the person.'),
+        tel: makeMeta('رقم الهاتف', 'Telephone', 'رقم الهاتف الأرضي أو البديل.', 'Telephone landline or alternate number.'),
+        password: makeMeta('كلمة المرور (مشفرة)', 'Password (Hashed)', 'قيمة مشفرة لا يمكن استعادتها كنص واضح.', 'Hashed secret; not reversible to plain text.'),
+        pwd: makeMeta('كلمة المرور (مشفرة)', 'Password (Hashed)', 'صيغة مختصرة لحقل كلمة المرور المشفرة.', 'Shorthand field for hashed password.'),
+        hash: makeMeta('بصمة التشفير', 'Hash', 'مخرجات تشفير لحماية البيانات الحساسة.', 'Digest output used for security.'),
+        role: makeMeta('الدور', 'Role', 'تحديد صلاحية المستخدم في النظام.', 'Represents user permissions level.'),
+        status: makeMeta('الحالة', 'Status', 'يوضح حالة السجل الحالية.', 'Shows current record status.'),
+        type: makeMeta('النوع', 'Type', 'تصنيف السجل أو الكيان.', 'Classification of the record.'),
+        check_in: makeMeta('وقت الدخول', 'Check-in Time', 'وقت تسجيل الدخول أو الوصول.', 'Timestamp for arrival/check-in.'),
+        check_out: makeMeta('وقت الخروج', 'Check-out Time', 'وقت تسجيل الخروج أو المغادرة.', 'Timestamp for leaving/check-out.'),
+        created_at: makeMeta('تاريخ الإنشاء', 'Created At', 'تاريخ ووقت إنشاء السجل.', 'Creation date and time of this row.'),
+        updated_at: makeMeta('آخر تحديث', 'Updated At', 'آخر وقت تم فيه تعديل السجل.', 'Last modification timestamp.'),
+        date: makeMeta('التاريخ', 'Date', 'تاريخ مرتبط بالسجل.', 'Date associated with this row.'),
+        time: makeMeta('الوقت', 'Time', 'وقت مرتبط بالسجل.', 'Time associated with this row.'),
+        company: makeMeta('الشركة', 'Company', 'اسم الجهة أو الشركة المرتبطة.', 'Company or organization name.'),
+        department: makeMeta('القسم', 'Department', 'القسم الإداري أو التنظيمي.', 'Administrative department name.'),
+        address: makeMeta('العنوان', 'Address', 'عنوان الموقع أو السكن.', 'Postal or location address.'),
+        city: makeMeta('المدينة', 'City', 'المدينة المرتبطة بالسجل.', 'City value for this record.'),
+        country: makeMeta('الدولة', 'Country', 'الدولة المرتبطة بالسجل.', 'Country value for this record.'),
+        first_name: makeMeta('الاسم الأول', 'First Name', 'الاسم الشخصي الأول.', 'Given name.'),
+        last_name: makeMeta('اسم العائلة', 'Last Name', 'الاسم العائلي.', 'Family/surname.'),
+        purpose: makeMeta('الغرض', 'Purpose', 'سبب الزيارة أو العملية.', 'Reason or purpose of the action.'),
+        reason: makeMeta('الغرض', 'Reason', 'سبب التنفيذ أو التسجيل.', 'Reason for the action or registration.'),
+        note: makeMeta('ملاحظات', 'Note', 'ملاحظات إضافية مرتبطة بالسجل.', 'Additional note attached to this row.'),
+        notes: makeMeta('ملاحظات', 'Notes', 'مجموعة ملاحظات إضافية.', 'Collection of extra notes.'),
+        comment: makeMeta('تعليق', 'Comment', 'تعليق توضيحي قصير.', 'Short explanatory comment.'),
+        remarks: makeMeta('ملاحظات', 'Remarks', 'ملاحظات إدارية أو تشغيلية.', 'Administrative or operational remarks.'),
+        has_appointment: makeMeta('لديه موعد', 'Has Appointment', 'هل يوجد موعد مرتبط بهذا السجل؟', 'Whether this record has an appointment.'),
+        is_available: makeMeta('متاح', 'Is Available', 'هل الفترة أو المورد متاح؟', 'Whether slot/resource is available.'),
+        appointment_time: makeMeta('موعد الزيارة', 'Appointment Time', 'وقت الموعد المحدد مسبقًا.', 'Scheduled appointment time.'),
+        national_id: makeMeta('الرقم الوطني', 'National ID', 'رقم الهوية الوطنية.', 'National identification number.'),
+        username: makeMeta('اسم المستخدم', 'Username', 'اسم الدخول للحساب.', 'Login username.'),
+        display_name: makeMeta('اسم العرض', 'Display Name', 'الاسم المعروض في واجهة النظام.', 'Human-friendly display name.'),
+        host: makeMeta('المستضيف', 'Host', 'الشخص أو الجهة المستقبلة.', 'Person/department receiving the visitor.'),
+        slot_date: makeMeta('تاريخ الفترة', 'Slot Date', 'تاريخ الفترة الزمنية.', 'Date assigned to a time slot.'),
+        slot_time: makeMeta('وقت الفترة', 'Slot Time', 'وقت بداية الفترة الزمنية.', 'Start time of a slot.'),
+        max_capacity: makeMeta('السعة القصوى', 'Max Capacity', 'الحد الأقصى المسموح به.', 'Maximum allowed capacity.'),
+        current_bookings: makeMeta('الحجوزات الحالية', 'Current Bookings', 'عدد الحجوزات الحالية في الفترة.', 'Current number of bookings for the slot.')
+      };
+
+      if (map[key]) return map[key];
+
+      return makeMeta(
+        humanize(key),
+        toTitleCase(key),
+        'حقل بيانات عام ضمن هذا الجدول.',
+        'General data field in this table.'
+      );
+    }
+
+    function isSensitiveColumn(name) {
+      const key = String(name || '').toLowerCase();
+      return ['password', 'pwd', 'hash', 'secret', 'token'].includes(key);
+    }
+
+    function isDateLike(value) {
+      if (typeof value !== 'string') return false;
+      return /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(value.trim());
+    }
+
+    function formatArabicDate(value) {
+      const normalized = String(value).replace(' ', 'T');
+      const d = new Date(normalized);
+      if (Number.isNaN(d.getTime())) return null;
+      return d.toLocaleString('ar-EG', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function explainValueInArabic(columnName, value) {
+      const col = String(columnName || '').toLowerCase();
+
+      if (value === null || value === undefined || value === '') {
+        return {
+          display: '-',
+          noteAr: 'قيمة فارغة',
+          noteEn: 'Empty value',
+          isAr: true
+        };
+      }
+
+      const strValue = String(value);
+
+      if (/^(pbkdf2:sha256:\d+\$|scrypt:)/i.test(strValue)) {
+        return {
+          display: strValue,
+          noteAr: 'كلمة مرور مشفرة (Hash) - لا يمكن فكها',
+          noteEn: 'Hashed password (not decryptable)',
+          isAr: false
+        };
+      }
+
+      if (col === 'role') {
+        const roleMap = {
+          admin: 'مدير النظام',
+          security: 'أمن البوابة',
+          receptionist: 'موظف الاستقبال'
+        };
+        const ar = roleMap[strValue.toLowerCase()];
+        if (ar) {
+          return {
+            display: strValue,
+            noteAr: ar,
+            noteEn: 'Mapped role',
+            isAr: false
+          };
+        }
+      }
+
+      if (['is_available', 'has_appointment'].includes(col)) {
+        const n = Number(value);
+        return {
+          display: String(value),
+          noteAr: n === 1 ? 'نعم / متاح' : 'لا / غير متاح',
+          noteEn: n === 1 ? 'Yes / Available' : 'No / Not available',
+          isAr: true
+        };
+      }
+
+      if (isDateLike(strValue)) {
+        const formatted = formatArabicDate(strValue);
+        if (formatted) {
+          return {
+            display: strValue,
+            noteAr: formatted,
+            noteEn: 'Arabic date/time rendering',
+            isAr: false
+          };
+        }
+      }
+
+      if (isSensitiveColumn(col)) {
+        return {
+          display: strValue,
+          noteAr: 'قيمة حساسة (مشفرة غالبًا)',
+          noteEn: 'Sensitive value (likely hashed)',
+          isAr: false
+        };
+      }
+
+      return {
+        display: strValue,
+        noteAr: 'قيمة مباشرة',
+        noteEn: 'Direct value',
+        isAr: false
+      };
+    }
+
+    function setStatus(message, type) {
+      statusEl.textContent = message;
+      statusEl.className = `status ${type || ''}`.trim();
+    }
+
+    function createButton(name) {
+      const meta = getTableMeta(name);
+      const button = document.createElement('button');
+      button.className = 'table-btn';
+      button.type = 'button';
+      button.dataset.table = name;
+      button.innerHTML = `${meta.ar}<small>${meta.en}</small>`;
+      button.addEventListener('click', () => loadTable(name));
+      return button;
+    }
+
+    function createHeaderCell(name) {
+      const th = document.createElement('th');
+      const meta = getColumnMeta(name);
+      th.innerHTML = `<span class="ar">${meta.ar}</span><span class="en">${meta.en} (${name})</span>`;
+      return th;
+    }
+
+    function renderSqlWithArabicExplanation(name, cols, sql) {
+      const meta = getTableMeta(name);
+      const selectedSql = sql && sql.trim() ? sql.trim() : `CREATE TABLE ${name} (...)`;
+      const listHtml = cols
+        .map((c) => {
+          const m = getColumnMeta(c);
+          return `<li><strong>${m.ar}</strong> (${c}): ${m.arDesc}</li>`;
+        })
+        .join('');
+
+      sqlSectionEl.innerHTML = `
+        <pre>${escapeHtml(selectedSql)}</pre>
+        <div class="explain">
+          <p><strong>الجدول:</strong> ${meta.ar} | ${meta.en}</p>
+          <p><strong>الوصف:</strong> هذا القسم يعرض كود إنشاء الجدول كما هو داخل قاعدة البيانات.</p>
+          <ul>${listHtml}</ul>
+        </div>
+      `;
+    }
+
+    function renderColumnGuide(columns) {
+      if (!columns.length) {
+        columnGuideEl.innerHTML = '<div class="column-card">لا توجد أعمدة للعرض.</div>';
+        return;
+      }
+
+      columnGuideEl.innerHTML = columns
+        .map((col) => {
+          const meta = getColumnMeta(col);
+          return `
+            <article class="column-card">
+              <div class="name">${col}</div>
+              <div class="label">${meta.ar} / ${meta.en}</div>
+              <div class="desc">${meta.arDesc}</div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+
+    function renderTable(columns, rows) {
+      if (!columns.length) {
+        tableContainerEl.innerHTML = '<div style="padding:12px">لا توجد أعمدة متاحة.</div>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const tbody = document.createElement('tbody');
+
+      const hr = document.createElement('tr');
+      columns.forEach((c) => hr.appendChild(createHeaderCell(c)));
+      thead.appendChild(hr);
+
+      if (!rows.length) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = columns.length;
+        td.innerHTML = '<span class="empty">لا توجد بيانات في هذا الجدول.</span>';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      } else {
+        rows.forEach((row) => {
+          const tr = document.createElement('tr');
+          columns.forEach((col) => {
+            const td = document.createElement('td');
+            const explained = explainValueInArabic(col, row[col]);
+
+            const valueSpan = document.createElement('span');
+            valueSpan.className = explained.isAr ? 'value ar' : 'value';
+            valueSpan.textContent = explained.display;
+
+            const noteSpan = document.createElement('span');
+            noteSpan.className = 'value-note';
+            noteSpan.textContent = `${explained.noteAr} | ${explained.noteEn}`;
+
+            td.appendChild(valueSpan);
+            td.appendChild(noteSpan);
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+      }
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+
+      tableContainerEl.innerHTML = '';
+      tableContainerEl.appendChild(table);
+    }
+
+    async function loadTables() {
+      setStatus('جاري جلب الجداول...', 'warn');
+      tableButtonsEl.innerHTML = '';
+
+      try {
+        const res = await fetch('/api/tables');
+        if (!res.ok) {
+          throw new Error('تعذر جلب الجداول من الخادم.');
+        }
+
+        const tables = await res.json();
+        if (!Array.isArray(tables) || !tables.length) {
+          setStatus('لا توجد جداول متاحة في قاعدة البيانات.', 'warn');
+          return;
+        }
+
+        tables.forEach((name) => {
+          tableButtonsEl.appendChild(createButton(name));
+        });
+
+        setStatus(`تم تحميل ${tables.length} جدول/جداول بنجاح.`, 'ok');
+        await loadTable(tables[0]);
+      } catch (err) {
+        setStatus(`خطأ: ${err.message}`, 'warn');
+      }
+    }
+
+    async function loadTable(name) {
+      if (!name) return;
+      setStatus(`جاري تحميل الجدول: ${name} ...`, 'warn');
+
+      document.querySelectorAll('.table-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.table === name);
+      });
+
+      try {
+        const res = await fetch(`/api/table/${encodeURIComponent(name)}`);
+        const payload = await res.json();
+        if (!res.ok) {
+          throw new Error(payload.error || 'فشل تحميل بيانات الجدول.');
+        }
+
+        const columns = Array.isArray(payload.columns) ? payload.columns : [];
+        const rows = Array.isArray(payload.rows) ? payload.rows : [];
+        renderSqlWithArabicExplanation(name, columns, payload.createSql || '');
+        renderColumnGuide(columns);
+        renderTable(columns, rows);
+        setStatus(`تم عرض الجدول ${name} بنجاح. عدد السجلات: ${rows.length}`, 'ok');
+      } catch (err) {
+        setStatus(`خطأ أثناء تحميل الجدول: ${err.message}`, 'warn');
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    loadTables();
+  </script>
+</body>
+</html>

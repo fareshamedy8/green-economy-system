@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إدخال البيانات – نظام متابعة الاقتصاد الأخضر</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" />
+</head>
+<body data-page="data-entry">
+
+<!-- تحميل -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-layout">
+  <!-- ══ القائمة الجانبية ══════════════════════════════════════════════ -->
+  <aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-leaf"></i></div>
+      <div class="brand-text">
+        <h2>الاقتصاد الأخضر</h2>
+        <span>Green Economy Monitor</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label" data-i18n="nav.main">القائمة الرئيسية</div>
+      <a href="{{ url_for('dashboard') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-chart-column"></i></span> <span data-i18n="nav.dashboard">لوحة التحكم</span>
+      </a>
+      {% if role != 'viewer' %}
+      <a href="{{ url_for('data_entry') }}" class="nav-item active">
+        <span class="nav-icon"><i class="fa-solid fa-plus"></i></span> <span data-i18n="nav.dataEntry">إدخال البيانات</span>
+      </a>
+      {% endif %}
+      <a href="{{ url_for('reports') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span> <span data-i18n="nav.reports">التقارير والتحليلات</span>
+      </a>
+      <div class="nav-section-label" style="margin-top:.75rem" data-i18n="nav.analytics">التحليلات المتقدمة</div>
+      <a href="{{ url_for('green_score_page') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-star"></i></span> <span data-i18n="nav.greenScore">مؤشر الأداء البيئي</span>
+      </a>
+      <a href="{{ url_for('predictions_page') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-brain"></i></span> <span data-i18n="nav.predictions">توقعات AI</span>
+      </a>
+      <a href="{{ url_for('compare_page') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-code-compare"></i></span> <span data-i18n="nav.compare">مقارنة المؤسسات</span>
+      </a>
+      <a href="{{ url_for('notifications_page') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-bell"></i></span> <span data-i18n="nav.notifications">الإشعارات</span><span class="nav-badge" id="sidebarAlertBadge" style="display:none">0</span>
+      </a>
+      {% if role == 'admin' %}
+      <div class="nav-section-label" style="margin-top:.75rem" data-i18n="nav.system">النظام</div>
+      <a href="{{ url_for('settings_page') }}" class="nav-item">
+        <span class="nav-icon"><i class="fa-solid fa-gear"></i></span> <span data-i18n="nav.settings">الإعدادات</span>
+      </a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+        <div>
+          <div class="user-name">{{ username }}</div>
+          <div class="user-role">{% if role == 'admin' %}مدير النظام{% elif role == 'user' %}مستخدم{% else %}مشاهد{% endif %}</div>
+        </div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-btn">
+        <span><i class="fa-solid fa-right-from-bracket"></i></span> تسجيل الخروج
+      </a>
+    </div>
+  </aside>
+
+  <!-- ══ المحتوى الرئيسي ═══════════════════════════════════════════════ -->
+  <main class="main-content">
+    <header class="topbar">
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="القائمة"><i class="fa-solid fa-bars"></i></button>
+      <div class="topbar-title">
+        <h1><i class="fa-solid fa-plus"></i> إدخال البيانات</h1>
+        <p>إضافة وإدارة بيانات المؤسسات البيئية</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-badge">
+          <span class="badge-dot"></span>
+          <span data-i18n="status.connected">متصل</span>
+        </div>
+        <div class="topbar-role-badge">
+          <i class="fa-solid fa-user-tag"></i>
+          {% if role == 'admin' %}مدير{% elif role == 'user' %}مستخدم{% else %}مشاهد{% endif %}
+        </div>
+        <button class="theme-toggle" id="themeToggle" title="تبديل الوضع"><i class="fa-solid fa-moon"></i></button>
+        <button class="lang-toggle" id="langToggle">EN</button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- بطاقة النموذج -->
+      <div class="form-card">
+        <div class="card-header">
+          <div>
+            <h3><i class="fa-solid fa-building"></i> إضافة بيانات مؤسسة جديدة</h3>
+            <p>أدخل البيانات البيئية للمؤسسة</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <form id="dataEntryForm" novalidate>
+            <div class="form-grid">
+
+              <div class="form-group">
+                <label for="name"><i class="fa-solid fa-landmark"></i> اسم المؤسسة <span style="color:var(--danger)">*</span></label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  class="form-control-entry"
+                  placeholder="مثال: شركة الخليج للطاقة"
+                  required
+                  maxlength="255"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="year"><i class="fa-solid fa-calendar-days"></i> السنة <span style="color:var(--danger)">*</span></label>
+                <input
+                  type="number"
+                  id="year"
+                  name="year"
+                  class="form-control-entry"
+                  placeholder="مثال: 2024"
+                  required
+                  min="2000"
+                  max="2100"
+                  value="{{ now_year if now_year else '' }}"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="energy_consumption"><i class="fa-solid fa-bolt"></i> استهلاك الطاقة (MWh) <span style="color:var(--danger)">*</span></label>
+                <input
+                  type="number"
+                  id="energy_consumption"
+                  name="energy_consumption"
+                  class="form-control-entry"
+                  placeholder="مثال: 15000"
+                  required
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="renewable_energy_percentage"><i class="fa-solid fa-recycle"></i> نسبة الطاقة المتجددة (%) <span style="color:var(--danger)">*</span></label>
+                <input
+                  type="number"
+                  id="renewable_energy_percentage"
+                  name="renewable_energy_percentage"
+                  class="form-control-entry"
+                  placeholder="مثال: 35.5"
+                  required
+                  min="0"
+                  max="100"
+                  step="0.01"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="carbon_emissions"><i class="fa-solid fa-wind"></i> انبعاثات الكربون (طن) <span style="color:var(--danger)">*</span></label>
+                <input
+                  type="number"
+                  id="carbon_emissions"
+                  name="carbon_emissions"
+                  class="form-control-entry"
+                  placeholder="مثال: 850"
+                  required
+                  min="0"
+                  step="0.01"
+                />
+                <small style="color:var(--text-muted);font-size:.75rem;margin-top:.25rem;display:block">
+                  <i class="fa-solid fa-triangle-exclamation"></i> سيظهر تنبيه إذا تجاوز 1000 طن
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label for="green_projects"><i class="fa-solid fa-seedling"></i> عدد المشاريع الخضراء <span style="color:var(--danger)">*</span></label>
+                <input
+                  type="number"
+                  id="green_projects"
+                  name="green_projects"
+                  class="form-control-entry"
+                  placeholder="مثال: 5"
+                  required
+                  min="0"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="water_usage"><i class="fa-solid fa-droplet"></i> استهلاك المياه (م³)</label>
+                <input
+                  type="number"
+                  id="water_usage"
+                  name="water_usage"
+                  class="form-control-entry"
+                  placeholder="مثال: 12000"
+                  min="0"
+                  step="0.01"
+                  value="0"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="waste_recycling_percentage"><i class="fa-solid fa-recycle"></i> نسبة إعادة التدوير (%)</label>
+                <input
+                  type="number"
+                  id="waste_recycling_percentage"
+                  name="waste_recycling_percentage"
+                  class="form-control-entry"
+                  placeholder="مثال: 45.0"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value="0"
+                />
+              </div>
+
+            </div><!-- /form-grid -->
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-success">
+                <i class="fa-solid fa-floppy-disk"></i> حفظ البيانات
+              </button>
+              <button type="reset" class="btn btn-outline">
+                <i class="fa-solid fa-eraser"></i> مسح الحقول
+              </button>
+            </div>
+          </form>
+        </div>
+      </div><!-- /form-card -->
+
+      <!-- جدول البيانات -->
+      <div class="data-table-wrapper">
+        <div class="table-toolbar">
+          <div>
+            <h3 style="font-size:1rem;font-weight:700;color:var(--primary-dark)"><i class="fa-solid fa-table-list"></i> سجلات المؤسسات</h3>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+            <select id="yearFilter" class="form-control-entry" style="width:auto;padding:.45rem .8rem">
+              <option value="">كل السنوات</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2021">2021</option>
+            </select>
+            <div class="table-search">
+              <input type="text" id="searchInput" placeholder="بحث باسم المؤسسة..." />
+              <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+            </div>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>المؤسسة</th>
+                <th>السنة</th>
+                <th>استهلاك الطاقة</th>
+                <th>الطاقة المتجددة</th>
+                <th>انبعاثات الكربون</th>
+                <th>المشاريع الخضراء</th>
+                <th>استهلاك المياه</th>
+                <th>تدوير النفايات</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="dataTableBody">
+              <tr>
+                <td colspan="10" style="text-align:center;padding:2rem;color:var(--text-muted)">
+                  جارٍ التحميل...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ترقيم الصفحات -->
+        <div id="pagination" style="display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.25rem;border-top:1px solid var(--border)"></div>
+      </div><!-- /data-table-wrapper -->
+
+      <!-- ── استيراد CSV / Excel ── -->
+      <div class="form-card" style="margin-top:1.5rem">
+        <div class="card-header">
+          <div>
+            <h3><i class="fa-solid fa-file-import"></i> استيراد بيانات من CSV / Excel</h3>
+            <p>قم بتحميل ملف CSV أو Excel يحتوي على البيانات البيئية للمؤسسات</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="import-drop-area" id="csvDropArea">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size:2rem;color:var(--accent);margin-bottom:.75rem"></i>
+            <p style="margin:0;font-weight:600">اسحب الملف هنا أو انقر للاختيار</p>
+            <p style="margin:.4rem 0 0;font-size:.8rem;color:var(--text-muted)">يدعم ملفات .csv و .xlsx</p>
+            <input type="file" id="csvFileInput" accept=".csv,.xlsx" style="display:none" />
+          </div>
+          <div style="font-size:.8rem;color:var(--text-muted);margin-top:.75rem">
+            <p style="margin-bottom:.5rem"><i class="fa-solid fa-circle-info"></i> أعمدة الملف المطلوبة:</p>
+            <table style="border-collapse:collapse;width:100%;font-size:.78rem">
+              <thead>
+                <tr style="background:var(--bg-alt)">
+                  <th style="padding:.35rem .7rem;border:1px solid var(--border);text-align:right;font-weight:700">اسم العمود (في الملف)</th>
+                  <th style="padding:.35rem .7rem;border:1px solid var(--border);text-align:right;font-weight:700">المعنى</th>
+                  <th style="padding:.35rem .7rem;border:1px solid var(--border);text-align:right;font-weight:700">مثال</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td style="padding:.3rem .7rem;border:1px solid var(--border)"><code>name</code></td><td style="padding:.3rem .7rem;border:1px solid var(--border)">اسم المؤسسة</td><td style="padding:.3rem .7rem;border:1px solid var(--border);color:var(--text-muted)">المستشفى المركزي</td></tr>
+                <tr><td style="padding:.3rem .7rem;border:1px solid var(--border)"><code>year</code></td><td style="padding:.3rem .7rem;border:1px solid var(--border)">السنة</td><td style="padding:.3rem .7rem;border:1px solid var(--border);color:var(--text-muted)">2024</td></tr>
+                <tr><td style="padding:.3rem .7rem;border:1px solid var(--border)"><code>energy_consumption</code></td><td style="padding:.3rem .7rem;border:1px solid var(--border)">استهلاك الطاقة (MWh)</td><td style="padding:.3rem .7rem;border:1px solid var(--border);color:var(--text-muted)">15000</td></tr>
+                <tr><td style="padding:.3rem .7rem;border:1px solid var(--border)"><code>renewable_energy_percentage</code></td><td style="padding:.3rem .7rem;border:1px solid var(--border)">نسبة الطاقة المتجددة (%)</td><td style="padding:.3rem .7rem;border:1px solid var(--border);color:var(--text-muted)">35.5</td></tr>
+                <tr><td style="padding:.3rem .7rem;border:1px solid var(--border)"><code>carbon_emissions</code></td><td style="padding:.3rem .7rem;border:1px solid var(--border)">انبعاثات الكربون (طن)</td><td style="padding:.3rem .7rem;border:1px solid var(--border);color:var(--text-muted)">800</td></tr>
+                <tr><td style="padding:.3rem .7rem;border:1px solid var(--border)"><code>green_projects</code></td><td style="padding:.3rem .7rem;border:1px solid var(--border)">عدد المشاريع الخضراء</td><td style="padding:.3rem .7rem;border:1px solid var(--border);color:var(--text-muted)">5</td></tr>
+                <tr><td style="padding:.3rem .7rem;border:1px solid var(--border)"><code>water_usage</code></td><td style="padding:.3rem .7rem;border:1px solid var(--border)">استهلاك المياه (م³)</td><td style="padding:.3rem .7rem;border:1px solid var(--border);color:var(--text-muted)">12000</td></tr>
+                <tr><td style="padding:.3rem .7rem;border:1px solid var(--border)"><code>waste_recycling_percentage</code></td><td style="padding:.3rem .7rem;border:1px solid var(--border)">نسبة إعادة التدوير (%)</td><td style="padding:.3rem .7rem;border:1px solid var(--border);color:var(--text-muted)">45.0</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </main>
+</div>
+
+<!-- ══ نافذة التعديل ══════════════════════════════════════════════════════ -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--card-bg);border-radius:var(--radius);box-shadow:var(--shadow-md);width:100%;max-width:560px;max-height:90vh;overflow-y:auto">
+    <div style="padding:1.1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <h3 style="font-size:1rem;font-weight:700;color:var(--primary-dark)"><i class="fa-solid fa-pen"></i> تعديل بيانات المؤسسة</h3>
+      <button onclick="DataEntryPage.closeEdit()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted)"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div style="padding:1.25rem">
+      <input type="hidden" id="editId" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="form-group" style="grid-column:1/-1">
+          <label><i class="fa-solid fa-building"></i> اسم المؤسسة</label>
+          <input type="text" id="editName" class="form-control-entry" />
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-calendar"></i> السنة</label>
+          <input type="number" id="editYear" class="form-control-entry" min="2000" max="2100" />
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-bolt"></i> استهلاك الطاقة (MWh)</label>
+          <input type="number" id="editEnergy" class="form-control-entry" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-recycle"></i> نسبة الطاقة المتجددة (%)</label>
+          <input type="number" id="editRenewable" class="form-control-entry" min="0" max="100" step="0.1" />
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-wind"></i> انبعاثات الكربون (طن)</label>
+          <input type="number" id="editCarbon" class="form-control-entry" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-seedling"></i> عدد المشاريع الخضراء</label>
+          <input type="number" id="editProjects" class="form-control-entry" min="0" />
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-droplet"></i> استهلاك المياه (متر مكعب)</label>
+          <input type="number" id="editWater" class="form-control-entry" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-recycle"></i> نسبة إعادة تدوير النفايات (%)</label>
+          <input type="number" id="editWaste" class="form-control-entry" min="0" max="100" step="0.1" />
+        </div>
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.25rem">
+        <button class="btn btn-outline" onclick="DataEntryPage.closeEdit()"><i class="fa-solid fa-xmark"></i> إلغاء</button>
+        <button class="btn btn-success" onclick="DataEntryPage.saveEdit()"><i class="fa-solid fa-floppy-disk"></i> حفظ التعديلات</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

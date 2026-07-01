@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Green Economy System",
+			"type": "shell",
+			"command": "c:/python313/python.exe app.py",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Fix app.py - Remove MySQL duplicate",
+			"type": "shell",
+			"command": "c:/python313/python.exe -c \"import re; f=open('app.py','r',encoding='utf-8'); c=f.read(); f.close(); marker=\\\"\\n\\n# ── إعدادات قاعدة البيانات\\\"; idx=c.find(marker); new_c=c[:idx]+'\\n' if idx>0 else c; f=open('app.py','w',encoding='utf-8'); f.write(new_c); f.close(); print('Done:', len(c), '->', len(new_c))\"",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Fix app.py - Remove MySQL duplicate",
+			"type": "shell",
+			"command": "C:\\Python313\\python.exe fix_app.py",
+			"isBackground": false
+		}
+	]
+}

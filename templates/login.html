@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تسجيل الدخول – نظام متابعة الاقتصاد الأخضر</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" />
+</head>
+<body class="login-page">
+
+  <!-- خلفية متحركة بالجسيمات -->
+  <div class="login-bg">
+    <div class="login-bg-orb orb-1"></div>
+    <div class="login-bg-orb orb-2"></div>
+    <div class="login-bg-orb orb-3"></div>
+    <div class="login-particles">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- الحاوية الرئيسية -->
+  <div class="login-wrapper">
+
+    <!-- اللوحة اليسرى (عرض المعلومات) -->
+    <div class="login-panel-left">
+      <div class="login-brand">
+        <div class="login-brand-icon">
+          <i class="fa-solid fa-leaf"></i>
+        </div>
+        <h2>الاقتصاد الأخضر</h2>
+        <p>Green Economy Monitor</p>
+      </div>
+      <div class="login-features">
+        <div class="login-feature">
+          <div class="feature-icon"><i class="fa-solid fa-chart-column"></i></div>
+          <div>
+            <h4>لوحة تحكم تفاعلية</h4>
+            <p>رسوم بيانية شاملة لمؤشرات الاقتصاد الأخضر</p>
+          </div>
+        </div>
+        <div class="login-feature">
+          <div class="feature-icon"><i class="fa-solid fa-brain"></i></div>
+          <div>
+            <h4>توقعات بالذكاء الاصطناعي</h4>
+            <p>تنبؤات مستقبلية بانبعاثات الكربون والطاقة</p>
+          </div>
+        </div>
+        <div class="login-feature">
+          <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+          <div>
+            <h4>بيانات آمنة وموثوقة</h4>
+            <p>حماية كاملة مع سجل تدقيق شامل</p>
+          </div>
+        </div>
+      </div>
+      <div class="login-stats-row">
+        <div class="login-stat">
+          <span class="login-stat-num">{{ public_stats.total_institutions }}+</span>
+          <span class="login-stat-lbl">مؤسسة مسجلة</span>
+        </div>
+        <div class="login-stat-divider"></div>
+        <div class="login-stat">
+          <span class="login-stat-num">{{ public_stats.indicator_count }}</span>
+          <span class="login-stat-lbl">مؤشرات بيئية</span>
+        </div>
+        <div class="login-stat-divider"></div>
+        <div class="login-stat">
+          <span class="login-stat-num">AI</span>
+          <span class="login-stat-lbl">تنبؤات ذكية</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- اللوحة اليمنى (نموذج الدخول) -->
+    <div class="login-panel-right">
+      <div class="login-form-box">
+
+        <!-- رأس النموذج -->
+        <div class="login-form-header">
+          <div class="login-form-icon">
+            <i class="fa-solid fa-right-to-bracket"></i>
+          </div>
+          <h1>مرحباً بعودتك</h1>
+          <p>سجّل دخولك للمتابعة</p>
+        </div>
+
+        <!-- رسائل الخطأ / النجاح -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} login-alert">
+              {% if category == 'error' %}
+                <i class="fa-solid fa-circle-xmark"></i>
+              {% else %}
+                <i class="fa-solid fa-circle-check"></i>
+              {% endif %}
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endwith %}
+
+        <!-- النموذج -->
+        <form method="POST" action="{{ url_for('login') }}" novalidate id="loginForm">
+          <div class="login-field">
+            <label for="username">
+              <i class="fa-solid fa-user-tie"></i> اسم المستخدم
+            </label>
+            <div class="login-input-wrap">
+              <input
+                type="text"
+                id="username"
+                name="username"
+                placeholder="أدخل اسم المستخدم"
+                required
+                autocomplete="username"
+                maxlength="100"
+              />
+              <span class="login-input-border"></span>
+            </div>
+          </div>
+
+          <div class="login-field">
+            <label for="password">
+              <i class="fa-solid fa-lock"></i> كلمة المرور
+            </label>
+            <div class="login-input-wrap">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="أدخل كلمة المرور"
+                required
+                autocomplete="current-password"
+                maxlength="255"
+              />
+              <button type="button" class="toggle-password" tabindex="-1" onclick="togglePwd(this)">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+              <span class="login-input-border"></span>
+            </div>
+          </div>
+
+          <button type="submit" class="login-btn" id="loginBtn">
+            <span class="login-btn-text">
+              <i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول
+            </span>
+            <span class="login-btn-loader" style="display:none">
+              <i class="fa-solid fa-spinner fa-spin"></i> جارٍ التحقق...
+            </span>
+          </button>
+        </form>
+
+        <p class="login-footer-note">
+          <i class="fa-solid fa-circle-info"></i>
+          للدخول لأول مرة استخدم:
+          <button type="button" class="login-quick-fill" onclick="fillLoginCredentials('admin', '')">اسم المستخدم: <span>admin</span></button>
+          /
+          <button type="button" class="login-quick-fill" onclick="fillLoginCredentials('', 'admin123')">كلمة المرور: <span>admin123</span></button>
+        </p>
+
+        <p class="login-copyright">
+          © 2026 نظام متابعة الاقتصاد الأخضر
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function fillLoginCredentials(username, password) {
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+
+      if (username) {
+        usernameInput.value = username;
+        usernameInput.focus();
+      }
+
+      if (password) {
+        passwordInput.value = password;
+        passwordInput.focus();
+      }
+    }
+
+    function togglePwd(btn) {
+      const input = btn.closest('.login-input-wrap').querySelector('input');
+      const icon  = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-solid fa-eye-slash';
+      } else {
+        input.type = 'password';
+        icon.className = 'fa-solid fa-eye';
+      }
+    }
+    document.getElementById('loginForm').addEventListener('submit', function() {
+      const btn    = document.getElementById('loginBtn');
+      btn.querySelector('.login-btn-text').style.display = 'none';
+      btn.querySelector('.login-btn-loader').style.display = 'inline-flex';
+      btn.disabled = true;
+    });
+    // تطبيق الوضع الليلي المحفوظ
+    const theme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+  </script>
+</body>
+</html>
