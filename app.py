@@ -54,8 +54,6 @@ USE_MYSQL = _db_scheme in ('mysql', 'mariadb')
 USE_SQLITE = not (USE_POSTGRES or USE_MYSQL)
 DB_TYPE_LABEL = 'PostgreSQL' if USE_POSTGRES else 'MySQL/MariaDB' if USE_MYSQL else 'SQLite'
 SETTINGS_KEY_COL = 'setting_key' if USE_MYSQL else 'key'
-print("DATABASE_URL =", repr(DATABASE_URL))
-print("DB_SCHEME =", urlparse(DATABASE_URL).scheme if DATABASE_URL else "EMPTY")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1535,26 +1533,31 @@ def server_error(e):
     return render_template('error.html', code=500, message='خطأ داخلي في الخادم'), 500  # عرض صفحة خطأ
 
 
-if __name__ == '__main__':  # يُنفَّذ فقط عند تشغيل الملف مباشرةً
+# ══════════════════════════════════════════════════════════════════════════════
+# تهيئة قاعدة البيانات — تعمل دايمًا (سواء تشغيل مباشر أو عن طريق سيرفر
+# خارجي زي Vercel/Gunicorn). قبل كده كانت جوه if __name__=='__main__' بس،
+# فكانت بتتجاهَل تمامًا لما Vercel بيستورد الملف كـ module، فتطلع 500 error
+# لأن الجداول مش بتتعمل خالص.
+# ══════════════════════════════════════════════════════════════════════════════
+try:
+    init_db()  # أنشئ قاعدة البيانات والجداول إن لم تكن موجودة (آمن التكرار)
+    with app.app_context():
+        user = query('SELECT id FROM users WHERE username=?', ('admin',), one=True)  # تحقق من وجود حساب admin
+        if not user:  # إذا لم يكن موجوداً
+            execute('INSERT INTO users (username, password_hash, role) VALUES (?,?,?)',
+                    ('admin', generate_password_hash('admin123'), 'admin'))  # أنشئ حساب admin بكلمة مرور 'admin123'
+            print('[+] Admin account created: admin / admin123')
+            print('[!] تحذير أمني: غيّر كلمة المرور الافتراضية فور تسجيل الدخول الأول!')
+except Exception as e:
+    print(f'\n[ERROR] فشلت تهيئة قاعدة البيانات: {e}')  # لو فشلت التهيئة، اطبع الخطأ بس متوقفش السيرفر
+
+
+if __name__ == '__main__':  # يُنفَّذ فقط عند تشغيل الملف مباشرةً على جهازك
     import threading  # لتشغيل المتصفح في خيط منفصل
     import webbrowser  # لفتح المتصفح تلقائياً
 
     # ── التأكد من أن المجلد الحالي هو مجلد المشروع ──
     os.chdir(os.path.dirname(os.path.abspath(__file__)))  # انتقل لمجلد المشروع
 
-    try:
-        init_db()  # أنشئ قاعدة البيانات والجداول إن لم تكن موجودة
-        # إنشاء حساب admin تلقائياً إن لم يكن موجوداً
-        with app.app_context():
-            user = query('SELECT id FROM users WHERE username=?', ('admin',), one=True)  # تحقق من وجود حساب admin
-            if not user:  # إذا لم يكن موجوداً
-                execute('INSERT INTO users (username, password_hash, role) VALUES (?,?,?)',
-                        ('admin', generate_password_hash('admin123'), 'admin'))  # أنشئ حساب admin بكلمة مرور 'admin123'
-                print('[+] Admin account created: admin / admin123')  # أبلغ المستخدم
-                print('[!] تحذير أمني: غيّر كلمة المرور الافتراضية فور تسجيل الدخول الأول!')  # تحذير أمني
-
-        threading.Timer(1.5, lambda: webbrowser.open('http://127.0.0.1:5000')).start()  # افتح المتصفح بعد 1.5 ثانية
-        app.run(debug=False, host='0.0.0.0', port=5000)  # شغّل الخادم على بورت 5000
-    except Exception as e:
-        print(f'\n[ERROR] حدث خطأ: {e}')  # اطبع الخطأ
-        input('\nاضغط Enter للإغلاق ...')  # انتظر المستخدم
+    threading.Timer(1.5, lambda: webbrowser.open('http://127.0.0.1:5000')).start()  # افتح المتصفح بعد 1.5 ثانية
+    app.run(debug=False, host='0.0.0.0', port=5000)  # شغّل الخادم على بورت 5000
