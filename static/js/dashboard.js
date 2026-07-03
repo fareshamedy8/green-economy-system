@@ -2107,15 +2107,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   })();
 
-  const page = document.body.dataset.page;
-  if (page === 'dashboard') {
+const page = document.body.dataset.page;
+
+if (page === 'dashboard') {
     DashboardPage.init();
+
     // Drag & Drop – يُفعَّل فقط إذا كانت SortableJS محمَّلة
     if (typeof Sortable !== 'undefined') {
-      const grid = document.querySelector('.stats-grid');
-      if (grid) new Sortable(grid, { animation: 150, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen' });
+        const grid = document.querySelector('.stats-grid');
+
+        if (grid) {
+            new Sortable(grid, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+
+                delay: 300,
+                delayOnTouchOnly: true,
+                touchStartThreshold: 10,
+                fallbackTolerance: 10
+            });
+        }
     }
-  }
+}
   if (page === 'data-entry') {
     DataEntryPage.init();
     CsvImport.init();
