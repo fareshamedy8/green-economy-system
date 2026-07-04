@@ -65,13 +65,13 @@ SETTINGS_KEY_COL = 'setting_key' if USE_MYSQL else 'key'
 # ══════════════════════════════════════════════════════════════════════════════
 
 if USE_POSTGRES:  # إذا كان المشروع مضبوطاً على PostgreSQL
-    import psycopg2              # مكتبة الاتصال بالـ PostgreSQL
-    import psycopg2.extras       # أدوات إضافية مثل RealDictCursor (لإرجاع الصفوف كقواميس)
+    import psycopg
+    from psycopg.rows import dict_row
 
     def get_db():
         """ يُرجع اتصال PostgreSQL الخاص بالطلب الحالي """
         if 'db' not in g:  # إذا لم يكن هناك اتصال مفتوح في هذا الطلب
-            g.db = psycopg2.connect(DATABASE_URL)  # افتح اتصال جديد
+            g.db = psycopg.connect(DATABASE_URL)  # افتح اتصال جديد
             g.db.autocommit = False  # عطّل autocommit حتى نتحكم يدوياً في الحفظ
         return g.db  # أرجع الاتصال المخزّن في g (سياق الطلب)
 
@@ -84,7 +84,7 @@ if USE_POSTGRES:  # إذا كان المشروع مضبوطاً على PostgreSQ
     def query(sql, params=(), one=False):
         """ تنفيذ استعلام SELECT وإرجاع النتائج """
         sql = sql.replace('?', '%s').replace("datetime('now')", 'NOW()')  # تحويل صيغة SQLite إلى PostgreSQL
-        cur = get_db().cursor(cursor_factory=psycopg2.extras.RealDictCursor)  # cursor يُرجع كل صف كقاموس
+        cur = get_db().cursor(row_factory=dict_row)  # cursor يُرجع كل صف كقاموس
         cur.execute(sql, params)  # تنفيذ الاستعلام
         rows = cur.fetchall()     # جلب كل الصفوف
         return (rows[0] if rows else None) if one else rows  # إذا one=True أرجع صفاً واحداً فقط
@@ -100,7 +100,7 @@ if USE_POSTGRES:  # إذا كان المشروع مضبوطاً على PostgreSQ
 
     def init_db():
         """ إنشاء الجداول في PostgreSQL إذا لم تكن موجودة """
-        db = psycopg2.connect(DATABASE_URL)  # اتصال مباشر لإنشاء الجداول
+        db = psycopg.connect(DATABASE_URL)  # اتصال مباشر لإنشاء الجداول
         cur = db.cursor()    # cursor لتنفيذ الاستعلامات
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
