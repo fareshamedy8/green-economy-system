@@ -50,7 +50,7 @@ _db_scheme = ''
 if DATABASE_URL:
     try:
         _db_scheme = urlparse(DATABASE_URL).scheme.split('+', 1)[0].lower()
-    except Exception as _url_err:  # حماية: رابط تالف مايكسرش تحميل الملف بالكامل
+    except Exception as _url_err:
         print(f'[ERROR] DATABASE_URL غير صالح: {_url_err}')
         _db_scheme = ''
 USE_POSTGRES = _db_scheme in ('postgres', 'postgresql')
