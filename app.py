@@ -48,7 +48,11 @@ MAIL_TO       = os.environ.get('MAIL_TO', '')                              # ا�
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
 _db_scheme = ''
 if DATABASE_URL:
-    _db_scheme = urlparse(DATABASE_URL).scheme.split('+', 1)[0].lower()
+    try:
+        _db_scheme = urlparse(DATABASE_URL).scheme.split('+', 1)[0].lower()
+    except Exception as _url_err:  # حماية: رابط تالف مايكسرش تحميل الملف بالكامل
+        print(f'[ERROR] DATABASE_URL غير صالح: {_url_err}')
+        _db_scheme = ''
 USE_POSTGRES = _db_scheme in ('postgres', 'postgresql')
 USE_MYSQL = _db_scheme in ('mysql', 'mariadb')
 USE_SQLITE = not (USE_POSTGRES or USE_MYSQL)
@@ -1386,7 +1390,7 @@ def api_notifications():  # دالة جلب الإشعارات
 @role_required('admin')  # فقط المسؤول
 def api_settings():  # دالة إدارة الإعدادات
     if request.method == 'GET':
-        rows = query(f'SELECT {SETTINGS_KEY_COL} AS key, value FROM settings')  # جلب كل الإعدادات
+        rows = query(f'SELECT {SETTINGS_KEY_COL} AS `key`, value FROM settings')  # جلب كل الإعدادات (key كلمة محجوزة في MySQL فلازم backticks)
         data = {r['key']: r['value'] for r in rows}  # تحويل لقاموس
         # معلومات النظام (للقراءة فقط)
         import sys, flask as _flask

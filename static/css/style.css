@@ -479,6 +479,7 @@ input, select, textarea { font: inherit; }
   color: rgba(200,230,210,.65);
   text-align: center;
   line-height: 1.6;
+  display: none;
 }
 
 .login-footer-note code {
