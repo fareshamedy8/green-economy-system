@@ -1,5 +1,3 @@
-from flask import Blueprint
+# Accounting package initializer
 
-bp = Blueprint('accounting', __name__, template_folder='templates')
-
-from . import routes  # noqa: E402, F401
+# This package contains the accounting blueprint and utilities.

@@ -1,140 +1,110 @@
 from flask import Blueprint, request, jsonify
-from datetime import datetime
+import json
 
-bp = Blueprint('accounting', __name__)
+from typing import List
 
-# Import DB helpers from main app
-try:
-    from app import query, execute, login_required, role_required, log_audit
-except Exception:
-    # If import fails (during tests), define stubs to avoid hard crash
-    def query(*a, **k):
-        return []
-    def execute(*a, **k):
-        return None
-    def login_required(f):
-        return f
-    def role_required(*r):
-        def dec(f):
-            return f
-        return dec
-    def log_audit(action, details=''):
-        pass
+# import the main app module (app.execute, app.query, app.log_audit)
+import app as main_app
 
+accounting_bp = Blueprint('accounting', __name__)
 
-@bp.route('/accounts', methods=['GET'])
-@login_required
-def get_accounts():
-    rows = query('SELECT id, code, name, type, parent_id, is_active FROM accounts ORDER BY code')
-    return jsonify([dict(r) for r in rows])
+@accounting_bp.route('/accounts', methods=['GET'])
+def list_accounts():
+    try:
+        rows = main_app.query('SELECT * FROM accounts ORDER BY code')
+        result = [dict(r) for r in rows]
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
+@accounting_bp.route('/accounts', methods=['POST'])
+def create_account():
+    payload = request.get_json() or {}
+    code = payload.get('code')
+    name = payload.get('name')
+    type_ = payload.get('type', 'asset')
+    parent_id = payload.get('parent_id')
+    currency = payload.get('currency')
+    is_active = 1 if payload.get('is_active', True) else 0
+    if not code or not name:
+        return jsonify({'error': 'code and name required'}), 400
+    try:
+        cur = main_app.execute(
+            'INSERT INTO accounts (code, name, type, parent_id, currency, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime(\'now\'))',
+            (code, name, type_, parent_id, currency, is_active),
+        )
+        main_app.log_audit('create_account', f'{code} - {name}')
+        return jsonify({'id': getattr(cur, 'lastrowid', None) or None}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-@bp.route('/accounts', methods=['POST'])
-@login_required
-@role_required('admin', 'user')
-def add_account():
-    data = request.get_json(silent=True) or {}
-    code = str(data.get('code','')).strip()
-    name = str(data.get('name','')).strip()
-    atype = str(data.get('type','')).strip()
-    parent = data.get('parent_id')
-    if not code or not name or atype not in ('Asset','Liability','Equity','Revenue','Expense'):
-        return jsonify({'error':'بيانات حساب غير صالحة'}), 400
-    # check duplicate code
-    if query('SELECT id FROM accounts WHERE code=?', (code,), one=True):
-        return jsonify({'error':'كود الحساب موجود بالفعل'}), 409
-    cur = execute('INSERT INTO accounts (code,name,type,parent_id,is_active) VALUES (?,?,?,?,?)', (code,name,atype,parent or None,1))
-    account = dict(query('SELECT * FROM accounts WHERE id=?', (cur.lastrowid,), one=True)) if cur is not None else {'code':code,'name':name}
-    log_audit('Add account', f'{code} - {name}')
-    return jsonify({'message':'تم إنشاء الحساب','data':account}), 201
+@accounting_bp.route('/transactions', methods=['POST'])
+def create_transaction():
+    data = request.get_json() or {}
+    journal_id = data.get('journal_id')
+    date = data.get('date') or datetime_now_sql()
+    description = data.get('description', '')
+    reference = data.get('reference')
+    entries = data.get('entries', [])
 
+    if not isinstance(entries, list) or len(entries) == 0:
+        return jsonify({'error': 'entries list required'}), 400
 
-@bp.route('/parties', methods=['GET'])
-@login_required
-def get_parties():
-    rows = query('SELECT id, name, party_type, contact_info FROM parties ORDER BY name')
-    return jsonify([dict(r) for r in rows])
+    # validate sums
+    total_debit = sum(float(e.get('debit', 0) or 0) for e in entries)
+    total_credit = sum(float(e.get('credit', 0) or 0) for e in entries)
+    if round(total_debit - total_credit, 6) != 0:
+        return jsonify({'error': 'transaction not balanced', 'debit': total_debit, 'credit': total_credit}), 400
 
+    try:
+        # insert transaction
+        cur = main_app.execute(
+            "INSERT INTO transactions (journal_id, date, description, reference, created_by, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))",
+            (journal_id, date, description, reference, main_app.session.get('username', 'system')),
+        )
+        tx_id = getattr(cur, 'lastrowid', None)
+        # For Postgres/PyMySQL lastrowid differs; fetch last inserted id if None
+        if tx_id is None:
+            # try to fetch by row_unique combination - fallback
+            rows = main_app.query('SELECT id FROM transactions WHERE reference=? ORDER BY created_at DESC', (reference,), one=True)
+            tx_id = rows['id'] if rows else None
 
-@bp.route('/parties', methods=['POST'])
-@login_required
-@role_required('admin','user')
-def add_party():
-    data = request.get_json(silent=True) or {}
-    name = str(data.get('name','')).strip()
-    ptype = str(data.get('party_type','customer')).strip()
-    contact = str(data.get('contact_info','')).strip()
-    if not name:
-        return jsonify({'error':'اسم الطرف مطلوب'}), 400
-    cur = execute('INSERT INTO parties (name, party_type, contact_info) VALUES (?,?,?)', (name, ptype, contact))
-    party = dict(query('SELECT * FROM parties WHERE id=?', (cur.lastrowid,), one=True)) if cur is not None else {'name':name}
-    log_audit('Add party', f'{name} ({ptype})')
-    return jsonify({'message':'تم إنشاء الطرف','data':party}), 201
+        for e in entries:
+            acc = e.get('account_id')
+            debit = float(e.get('debit', 0) or 0)
+            credit = float(e.get('credit', 0) or 0)
+            main_app.execute(
+                'INSERT INTO entries (transaction_id, account_id, debit, credit, currency, amount_currency, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime(\'now\'))',
+                (tx_id, acc, debit, credit, e.get('currency'), e.get('amount_currency')),
+            )
 
+        main_app.log_audit('create_transaction', f'tx:{tx_id} desc:{description}')
+        return jsonify({'transaction_id': tx_id}), 201
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
 
-@bp.route('/journal-entries', methods=['POST'])
-@login_required
-@role_required('admin','user')
-def add_journal_entry():
-    data = request.get_json(silent=True) or {}
-    date = data.get('date') or datetime.now().strftime('%Y-%m-%d')
-    reference = data.get('reference','')
-    description = data.get('description','')
-    lines = data.get('lines') or []
-    if not lines or not isinstance(lines, list):
-        return jsonify({'error':'القيود غير صالحة'}), 400
-    total_debit = 0.0
-    total_credit = 0.0
-    for ln in lines:
-        d = float(ln.get('debit') or 0)
-        c = float(ln.get('credit') or 0)
-        if d < 0 or c < 0:
-            return jsonify({'error':'القيم لا يمكن أن تكون سالبة'}), 400
-        total_debit += d
-        total_credit += c
-    if round(total_debit,2) != round(total_credit,2):
-        return jsonify({'error':'القيود غير متوازنة: مجموع المدين يختلف عن مجموع الدائن'}), 400
-    # create journal entry
-    cur = execute('INSERT INTO journal_entries (date, reference, description, created_at) VALUES (?,?,?,datetime(\'now\'))', (date, reference, description))
-    je_id = getattr(cur, 'lastrowid', None)
-    if not je_id:
-        # try to fetch last inserted id for sqlite
-        je = query('SELECT id FROM journal_entries ORDER BY id DESC LIMIT 1', (), one=True)
-        je_id = je['id'] if je else None
-    # insert lines
-    for ln in lines:
-        account_id = int(ln.get('account_id'))
-        debit = float(ln.get('debit') or 0)
-        credit = float(ln.get('credit') or 0)
-        party_id = ln.get('party_id')
-        desc = ln.get('description','')
-        execute('INSERT INTO journal_lines (journal_id, account_id, debit, credit, party_id, description) VALUES (?,?,?,?,?,?)', (je_id, account_id, debit, credit, party_id, desc))
-    log_audit('Add journal entry', f'ID={je_id}')
-    entry = query('SELECT * FROM journal_entries WHERE id=?', (je_id,), one=True)
-    return jsonify({'message':'تم إضافة قيد يومي','data': dict(entry) if entry else {'id':je_id}}), 201
-
-
-@bp.route('/journal-entries', methods=['GET'])
-@login_required
-def list_journal_entries():
-    rows = query('SELECT id, date, reference, description, created_at FROM journal_entries ORDER BY date DESC, id DESC LIMIT 200')
-    return jsonify([dict(r) for r in rows])
-
-
-@bp.route('/reports/trial-balance', methods=['GET'])
-@login_required
+@accounting_bp.route('/trial-balance', methods=['GET'])
 def trial_balance():
-    rows = query('SELECT a.id, a.code, a.name, a.type, '
-                 'COALESCE(SUM(j.debit),0) AS debit, COALESCE(SUM(j.credit),0) AS credit '
-                 'FROM accounts a LEFT JOIN journal_lines j ON a.id=j.account_id '
-                 'GROUP BY a.id, a.code, a.name, a.type ORDER BY a.code')
-    result = []
-    total_debit = 0.0
-    total_credit = 0.0
-    for r in rows:
-        d = float(r['debit'] or 0)
-        c = float(r['credit'] or 0)
-        total_debit += d
-        total_credit += c
-        result.append({**dict(r), 'debit': round(d,2), 'credit': round(c,2)})
-    return jsonify({'data': result, 'total_debit': round(total_debit,2), 'total_credit': round(total_credit,2)})
+    date = request.args.get('date')
+    try:
+        # simple trial balance up to date
+        sql = """
+        SELECT a.id as account_id, a.code, a.name,
+            COALESCE(SUM(e.debit),0) as total_debit,
+            COALESCE(SUM(e.credit),0) as total_credit
+        FROM accounts a
+        LEFT JOIN entries e ON e.account_id = a.id
+        GROUP BY a.id, a.code, a.name
+        ORDER BY a.code
+        """
+        rows = main_app.query(sql)
+        result = [dict(r) for r in rows]
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def datetime_now_sql():
+    # return SQL-friendly current datetime for inserts when needed
+    import datetime
+    return datetime.datetime.utcnow().isoformat()
