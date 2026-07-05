@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, render_template
 from . import db
 from .models import Account, Transaction, Entry, Journal
 from decimal import Decimal
@@ -12,6 +12,11 @@ accounting_bp = bp
 @bp.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok', 'module': 'accounting'})
+
+@bp.route('/', methods=['GET'])
+def ui_index():
+    """Serve the simple single-page frontend for the accounting module."""
+    return render_template('accounting/index.html')
 
 @bp.route('/accounts', methods=['GET'])
 def list_accounts():

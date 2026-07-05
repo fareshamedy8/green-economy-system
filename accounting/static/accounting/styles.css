@@ -1,0 +1,4 @@
+body { background: #f8f9fa; }
+#accounts-list table { background: #fff; }
+.entry-row { display:flex; gap:6px; margin-bottom:6px; }
+.entry-row input { flex: 1; }
